@@ -19,6 +19,25 @@
 /* Launch a server thread, receives configuration and then applies it */
 void swallow_xlinkboot_server(chanend c_svr)
 {
+  unsigned boards_w, boards_h, reset, PLL_len, ret, i;
+  struct xlinkboot_pll_t PLL[128];
+  while(1)
+  {
+    c_svr :> boards_w;
+    c_svr :> boards_h;
+    c_svr :> reset;
+    c_svr :> PLL_len;
+    for (i = 0; i < PLL_len; i += 1)
+    {
+      c_svr :> PLL[i];
+    }
+    if (i > 128)
+    {
+      c_svr <: -XLB_PLL_LENGTH;
+    }
+    ret = swallow_xlinkboot(boards_w,boards_h,reset,PLL,PLL_len);
+    c_svr <: ret;
+  }
   return;
 }
 

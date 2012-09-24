@@ -1,5 +1,5 @@
 /*
- * swallow_xlinkboot - Example application that can prepare swallow boards to boot.
+ * xlinkboot - Boot chips over XLink
  *
  * In reality you will integrate the module with your own peripheral device code
  *
@@ -14,10 +14,18 @@
  * LICENSE.txt and at <http://github.xcore.com/>
  */
  
-#include "swallow_xlinkboot.h"
+#ifndef XLINKBOOT_H
+#define XLINKBOOT_H
 
-int main(void)
-{
-  struct xlinkboot_pll_t PLLs[1] = {{0xffffffff,0x0,0xffffffff,0x00002700}};
-  return swallow_xlinkboot(1,1,1,PLLs,1);
-}
+/* Help program groups of chips with PLL values */
+struct xlinkboot_pll_t {
+  unsigned mask;
+  unsigned start;
+  unsigned end;
+  unsigned val;
+};
+
+#define XLB_GENERIC_FAIL      0x1
+#define XLB_PLL_LENGTH        0x2
+
+#endif //XLINKBOOT_H
