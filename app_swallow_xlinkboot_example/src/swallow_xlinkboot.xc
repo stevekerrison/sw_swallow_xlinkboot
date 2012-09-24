@@ -1,5 +1,7 @@
 /*
- * swallow_xlinkboot
+ * swallow_xlinkboot - Example application that can prepare swallow boards to boot.
+ *
+ * In reality you will integrate the module with your own peripheral device code
  *
  * Provides a compatibility layer when needed, some stuff for initialisation,
  * and enables hybrid streaming channels that replace the "streaming chanend"
@@ -12,9 +14,10 @@
  * LICENSE.txt and at <http://github.xcore.com/>
  */
  
-#include "swallow_comms.h"
+#include "swallow_xlinkboot.h"
 
 int main(void)
 {
-  return 0;
+  unsigned PLLs[1] = {0x00002700};
+  return swallow_xlinkboot(1,1,1,PLLs,1);
 }

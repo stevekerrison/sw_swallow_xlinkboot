@@ -11,7 +11,7 @@ TARGET = XS1-L01A-TQ128-C5
 APP_NAME = swallow_xlinkboot
 
 # The USED_MODULES variable lists other module used by the application.
-USED_MODULES = swallow_comms
+USED_MODULES = swallow_comms swallow-xlinkboot
 
 # The flags passed to xcc when building the application
 # You can also set the following to override flags for a particular language:
