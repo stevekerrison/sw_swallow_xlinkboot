@@ -47,6 +47,9 @@
 #define SWXLB_PERIPH_LINK_CONFIG  0x80002004
 #define SWXLB_COMPUTE_LINK_CONFIG 0x80000800
 
+/* 500MHz from a 25MHz oscillator */
+#define SWXLB_PLL_DEFAULT         0x00002700
+
 
 /* Error numbers */
 

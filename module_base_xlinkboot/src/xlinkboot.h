@@ -23,20 +23,33 @@ struct xlinkboot_pll_t {
   unsigned start;
   unsigned end;
   unsigned val;
+  unsigned switch_div;
+  unsigned ref_div;
 };
 
 #define XLB_GENERIC_FAIL      0x1
 #define XLB_PLL_LENGTH        0x2
 #define XLB_LINK_FAIL         0x3
 
+/* Sensibly labelled link IDs... LOL */
 #define XLB_L_LINKA           2
 #define XLB_L_LINKB           3
 #define XLB_L_LINKC           0
 #define XLB_L_LINKD           1
-#define XLB_L_LINKG           4
-#define XLB_L_LINKH           5
 #define XLB_L_LINKE           6
 #define XLB_L_LINKF           7
+#define XLB_L_LINKG           4
+#define XLB_L_LINKH           5
+#define XLB_L_LINK_COUNT      8
+
+/**
+ * Use the top bit exclusively for routing back to origin.
+ * The LSB is just to distinguish ourselves from XScope and has no real significance
+**/
+#define XLB_ORIGIN_ID         0x8001
+
+#define XLB_PLL_DEFAULT       -1
+#define XLB_PLL_LEN_MAX       128
 
 /* TODO: PLL-based calculation of what the delay should be */
 #define XLB_UP_DELAY          0x1000
@@ -45,7 +58,18 @@ struct xlinkboot_pll_t {
 #define XLB_CAN_RX            0x04000000
 #define XLB_ERR               0x08000000
 
+/* Dir/net masks */
+#define XLB_DIR_MASK          0x00000f00
+#define XLB_DIR_SHIFT         8
+#define XLB_NET_MASK          0x000000f0
+#define XLB_NET_SHIFT         4
 
-int xlinkboot_link_up(unsigned id, unsigned link, unsigned local_config, unsigned remote_config);
+unsigned xlinkboot_pll_search(unsigned id, struct xlinkboot_pll_t PLLs[], unsigned PLL_len);
+
+int xlinkboot_link_up(unsigned id, unsigned local_link,
+  unsigned local_config, unsigned remote_link, unsigned remote_config);
+  
+int xlinkboot_initial_configure(unsigned local_id, unsigned remote_id, unsigned local_link, unsigned remote_link,
+  unsigned local_config, unsigned remote_config, struct xlinkboot_pll_t PLLs[], unsigned PLL_len, unsigned PLL_default);
 
 #endif //XLINKBOOT_H
