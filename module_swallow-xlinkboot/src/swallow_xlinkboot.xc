@@ -42,8 +42,17 @@ void swallow_xlinkboot_server(chanend c_svr)
 }
 
 /* Function call to apply a configuration to an array of swallow boards */
-int swallow_xlinkboot(unsigned boards_w, unsigned boards_h, unsigned reset, unsigned PLL[], unsigned PLL_len)
+int swallow_xlinkboot(unsigned boards_w, unsigned boards_h, unsigned reset, struct xlinkboot_pll_t PLL[], unsigned PLL_len)
 {
+  unsigned cols = boards_w * SWXLB_CHIPS_W * SWXLB_CORES_CHIP,
+    rows = boards_h * SWXLB_CHIPS_H,
+    total_cores = cols*rows;
+  if (total_cores > SWXLB_MAX_CORES ||
+    cols > COUNT_FROM_BITS(SWXLB_LBITS + SWXLB_HBITS) ||
+    rows > COUNT_FROM_BITS(SWXLB_VBITS))
+  {
+    return -SWXLB_INVALID_BOARD_DIMENSIONS;
+  }
   return -SWXLB_GENERIC_FAIL;
 } 
 
