@@ -38,15 +38,27 @@
 #define SWXLB_CORES_CHIP          2
 #define SWXLB_MAX_CORES           COUNT_FROM_BITS(SWXLB_LBITS + SWXLB_HBITS + SWXLB_VBITS)
 
+/* Parameters */
+
+/* Always the bottom-right corner, but are we using the bottom or right link to load the boards? */
+#define SWXLB_POS_BOTTOM          0
+#define SWXLB_POS_RIGHT           1
+
+#define SWXLB_PERIPH_LINK_CONFIG  0x80002004
+#define SWXLB_COMPUTE_LINK_CONFIG 0x80000800
+
+
 /* Error numbers */
 
 #define SWXLB_GENERIC_FAIL              0x10000
 #define SWXLB_INVALID_BOARD_DIMENSIONS  0x20000
+#define SWXLB_INVALID_PERIPHERAL_POS    0x30000
 
 /* Launch a server thread, receives configuration and then applies it */
 void swallow_xlinkboot_server(chanend c_svr);
 
 /* Function call to apply a configuration to an array of swallow boards */
-int swallow_xlinkboot(unsigned boards_w, unsigned boards_h, unsigned reset, struct xlinkboot_pll_t PLL[], unsigned PLL_len); 
+int swallow_xlinkboot(unsigned boards_w, unsigned boards_h, unsigned reset,
+  unsigned position, struct xlinkboot_pll_t PLL[], unsigned PLL_len); 
 
 #endif //SWALLOW_XLINKBOOT_H

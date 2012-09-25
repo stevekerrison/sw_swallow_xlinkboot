@@ -18,10 +18,6 @@
 
 int main(void)
 {
-  struct xlinkboot_pll_t PLLs[1];
-  PLLs[0].mask  = -1;
-  PLLs[0].start = 0;
-  PLLs[0].end   = -1;
-  PLLs[0].val   = 0x00002700;
-  return swallow_xlinkboot(1,1,1,PLLs,1);
+  struct xlinkboot_pll_t PLLs[1] = {{-1,0,-1,0x00002700}};
+  return swallow_xlinkboot(1,1,1,SWXLB_POS_BOTTOM,PLLs,1);
 }
