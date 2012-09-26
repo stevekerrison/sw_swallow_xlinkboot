@@ -128,6 +128,12 @@ static int swallow_xlinkboot_route_configure(unsigned r, unsigned c, unsigned ro
   return 0;
 }
 
+/* Reconfigure all links in 5-wire mode */
+static void swallow_xlinkboot_go5(unsigned rows, unsigned cols, unsigned position)
+{
+
+}
+
 /* Function call to apply a configuration to an array of swallow boards */
 int swallow_xlinkboot(unsigned boards_w, unsigned boards_h, unsigned reset, unsigned position,
   struct xlinkboot_pll_t PLL[], unsigned PLL_len)
@@ -237,6 +243,8 @@ int swallow_xlinkboot(unsigned boards_w, unsigned boards_h, unsigned reset, unsi
       swallow_xlinkboot_route_configure(r,c,rows,cols,SWXLB_COMPUTE_LINK_CONFIG);
     }
   }
+  /* Now my ID is wrong! So I must give myself a new one - our compute grid address with the P-bit set */
+  write_sswitch_reg_no_ack_clean(myid,0x5,swallow_xlinkboot_genid(rows-1,cols-1+position) | 1);
   /* TODO: Reconfigure links in 5-wire mode */
   /* TODO: Test & bring up any connected peripheral links */
   
