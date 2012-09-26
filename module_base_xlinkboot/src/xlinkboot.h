@@ -57,15 +57,23 @@ struct xlinkboot_pll_t {
 #define XLB_CAN_TX            0x02000000
 #define XLB_CAN_RX            0x04000000
 #define XLB_ERR               0x08000000
+#define XLB_ENABLE            0x80000000
+#define XLB_FIVEWIRE          0x40000000
+
+#define XLB_ROUTE_AVOID       0x000002f0
 
 /* Dir/net masks */
 #define XLB_DIR_MASK          0x00000f00
 #define XLB_DIR_SHIFT         8
+#define XLB_DIR_BITS          4
 #define XLB_NET_MASK          0x000000f0
 #define XLB_NET_SHIFT         4
 
 unsigned xlinkboot_pll_search(unsigned id, struct xlinkboot_pll_t PLLs[], unsigned PLL_len);
 
+void xlinkboot_other_links(unsigned id, unsigned start, unsigned end, unsigned config);
+
+/* Enable and bring-up a link */
 int xlinkboot_link_up(unsigned id, unsigned local_link,
   unsigned local_config, unsigned remote_link, unsigned remote_config);
   

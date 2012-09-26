@@ -49,6 +49,75 @@ void swallow_xlinkboot_server(chanend c_svr)
   return;
 }
 
+/* We now reprogram the switch to enable all desired links for the final network and do proper routing */
+int swallow_xlinkboot_route_configure(unsigned r, unsigned c)
+{
+  unsigned id = swallow_xlinkboot_genid(r,c);
+  unsigned dir, layer = (id >> SWXLB_LPOS) & MASK_FROM_BITS(SWXLB_LBITS);
+  int i;
+  for (i = SWXLB_LINK_ENABLE_BEGIN; i < SWXLB_LINK_ENABLE_END; i += 1)
+  {
+    switch (i)
+    {
+      default:
+        //Internal links 
+        dir = layer ? SWXLB_DIR_AWAY : SWXLB_DIR_TOWARDS;
+        break;
+      case 2:
+        //Left or upward link
+        dir = layer ? SWXLB_DIR_LEFT : SWXLB_DIR_UP;
+        break;
+      case 3:
+        //Right or downward link
+        dir = layer ? SWXLB_DIR_RIGHT : SWXLB_DIR_DOWN;
+        break;
+    }
+    write_sswitch_reg_no_ack_clean(id,0x20 + i,dir << 8);
+  }
+  {
+    unsigned row = id >> SWXLB_VPOS, col = (id >> SWXLB_HPOS) & MASK_FROM_BITS(SWXLB_HBITS),
+      layer = (id >> SWXLB_LPOS) & MASK_FROM_BITS(SWXLB_LBITS), i;
+    unsigned ldirbits = layer ? SWXLB_DIR_AWAY : SWXLB_DIR_TOWARDS;
+    unsigned vdirbits = 0, hdirbits = 0, xscopedirbits = 0, pdirbit = 0;
+    unsigned dirbits[2];
+    if (layer)
+    {
+      pdirbit = (row == 0) ? SWXLB_DIR_LEFT : SWXLB_DIR_RIGHT;
+      xscopedirbits = row == 1 ? SWXLB_DIR_LEFT : SWXLB_DIR_AWAY;
+      for (i = 0; i < SWXLB_VBITS; i++)
+      {
+        vdirbits <<= XLB_DIR_BITS;
+        vdirbits |= SWXLB_DIR_AWAY;
+      }
+      for (i = SWXLB_HBITS; i != 0; i--)
+      {
+        hdirbits <<= XLB_DIR_BITS;
+        hdirbits |= (((col >> i) & 1) ? SWXLB_DIR_LEFT : SWXLB_DIR_RIGHT);
+      }
+    }
+    else
+    {
+      pdirbit = (col == 0) ? SWXLB_DIR_UP : SWXLB_DIR_DOWN;
+      xscopedirbits = ((row == 0) ? SWXLB_DIR_DOWN : ((row == 1) ? SWXLB_DIR_AWAY : SWXLB_DIR_UP));
+      for (i = 0; i < SWXLB_HBITS; i++)
+      {
+        hdirbits <<= XLB_DIR_BITS;
+        hdirbits |= SWXLB_DIR_TOWARDS;
+      }
+      for (i = SWXLB_VBITS; i != 0; i--)
+      {
+        vdirbits <<= XLB_DIR_BITS;
+        vdirbits |= ((row & 1) ? SWXLB_DIR_UP : SWXLB_DIR_DOWN);
+      }
+    }
+    dirbits[0] = (((hdirbits << XLB_DIR_BITS) | ldirbits) << XLB_DIR_BITS) | pdirbit;
+    dirbits[1] = (xscopedirbits << (XLB_DIR_BITS * SWXLB_VBITS)) | vdirbits;
+    write_sswitch_reg_no_ack_clean(id,0xc,dirbits[0]);
+    write_sswitch_reg_no_ack_clean(id,0xd,dirbits[1]);
+  }
+  return 0;
+}
+
 /* Function call to apply a configuration to an array of swallow boards */
 int swallow_xlinkboot(unsigned boards_w, unsigned boards_h, unsigned reset, unsigned position,
   struct xlinkboot_pll_t PLL[], unsigned PLL_len)
@@ -134,16 +203,33 @@ int swallow_xlinkboot(unsigned boards_w, unsigned boards_h, unsigned reset, unsi
         result = xlinkboot_initial_configure(srcid, dstid, XLB_L_LINKF, XLB_L_LINKG,
           SWXLB_COMPUTE_LINK_CONFIG, SWXLB_COMPUTE_LINK_CONFIG, PLL, PLL_len, SWXLB_PLL_DEFAULT);
       }
+      xlinkboot_other_links(dstid,SWXLB_LINK_ENABLE_BEGIN,SWXLB_LINK_ENABLE_END,SWXLB_COMPUTE_LINK_CONFIG);
     }
     /* Update c here to allow initial skip */
     c = cols - 1;
   }
-  /* TODO: Bring up other links */
-  /* TODO: Apply final routing table */
+  for (r = 0; r < rows; r += 1)
+  {
+    /* Neighbour's ID */
+    unsigned nid = swallow_xlinkboot_genid(r,cols-2);
+    /* When we start a row, make sure the vertical entry point to the row then switches packets horizontally */
+    write_sswitch_reg_clean(nid,0x20 + XLB_L_LINKA, XLB_ROUTE_AVOID);
+    write_sswitch_reg_clean(nid,0x20 + XLB_L_LINKF, 0x00000100);
+    for (c = 0; c < cols; c += 1)
+    {
+      /* Tweaks routes to communicate with cores on the "0" layer as we move horizontally along the "1" plane */
+      if ((c & 1) == 0 && c + 2 < cols)
+      {
+        nid = swallow_xlinkboot_genid(r,c+1);
+        write_sswitch_reg_clean(nid,0x20 + XLB_L_LINKA, XLB_ROUTE_AVOID);
+        write_sswitch_reg_clean(nid,0x20 + XLB_L_LINKF, 0x00000100);
+      }
+      swallow_xlinkboot_route_configure(r,c);
+    }
+  }
   /* TODO: Reconfigure links in 5-wire mode */
   /* TODO: Test & bring up any connected peripheral links */
   
   return -SWXLB_GENERIC_FAIL;
-} 
-
+}
 

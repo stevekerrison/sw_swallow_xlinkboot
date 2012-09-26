@@ -28,7 +28,7 @@ int xlinkboot_link_up(unsigned id, unsigned local_link,
   unsigned data, tv;
   timer t;
   /* Put the link on a different network to avoid routing garbage */
-  write_sswitch_reg_clean(id,0x20 + local_link,0x000002f0);
+  write_sswitch_reg_clean(id,0x20 + local_link,XLB_ROUTE_AVOID);
   read_sswitch_reg(id,0x80 + local_link,data);
   while((data & (XLB_ERR | XLB_CAN_TX)) != XLB_CAN_TX)
   {
@@ -53,6 +53,22 @@ int xlinkboot_link_up(unsigned id, unsigned local_link,
     }
   }
   return 0;
+}
+
+void xlinkboot_other_links(unsigned id, unsigned start, unsigned end, unsigned config)
+{
+  unsigned data, i;
+  for (i = start; i < end; i += 1)
+  {
+    read_sswitch_reg(id,0x80 + i,data);
+    if (!(data & XLB_ENABLE))
+    {
+      /* Put the link on a different network to avoid routing garbage */
+      write_sswitch_reg_clean(id,0x20 + i,XLB_ROUTE_AVOID);
+      write_sswitch_reg_clean(id,0x80 + i,config);
+    }
+  }
+  return;
 }
 
 unsigned xlinkboot_pll_search(unsigned id, struct xlinkboot_pll_t PLLs[], unsigned PLL_len)

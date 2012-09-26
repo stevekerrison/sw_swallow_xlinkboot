@@ -40,6 +40,9 @@
 
 /* Parameters */
 
+#define SWXLB_LINK_ENABLE_BEGIN   2
+#define SWXLB_LINK_ENABLE_END     8
+
 /* Always the bottom-right corner, but are we using the bottom or right link to load the boards? */
 #define SWXLB_POS_BOTTOM          0
 #define SWXLB_POS_RIGHT           1
@@ -47,9 +50,15 @@
 #define SWXLB_PERIPH_LINK_CONFIG  0x80002004
 #define SWXLB_COMPUTE_LINK_CONFIG 0x80000800
 
+#define SWXLB_DIR_TOWARDS         0
+#define SWXLB_DIR_AWAY            1
+#define SWXLB_DIR_LEFT            2
+#define SWXLB_DIR_RIGHT           3
+#define SWXLB_DIR_UP              4
+#define SWXLB_DIR_DOWN            5
+
 /* 500MHz from a 25MHz oscillator */
 #define SWXLB_PLL_DEFAULT         0x00002700
-
 
 /* Error numbers */
 
@@ -63,5 +72,5 @@ void swallow_xlinkboot_server(chanend c_svr);
 /* Function call to apply a configuration to an array of swallow boards */
 int swallow_xlinkboot(unsigned boards_w, unsigned boards_h, unsigned reset,
   unsigned position, struct xlinkboot_pll_t PLL[], unsigned PLL_len); 
-
+  
 #endif //SWALLOW_XLINKBOOT_H

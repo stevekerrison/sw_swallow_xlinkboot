@@ -1,5 +1,5 @@
 /*
- * swallow_xlinkboot - Example application that can prepare swallow boards to boot.
+ * swallow_xlinkboot_example - Example application that can prepare swallow boards to boot.
  *
  * In reality you will integrate the module with your own peripheral device code
  *
