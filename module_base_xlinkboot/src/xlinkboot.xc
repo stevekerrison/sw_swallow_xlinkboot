@@ -128,3 +128,17 @@ int xlinkboot_initial_configure(unsigned local_id, unsigned remote_id, unsigned 
   return remote_id;
 }
 
+void xlinkboot_set5(unsigned local_id, unsigned remote_id, unsigned local_link, unsigned remote_link)
+{
+  unsigned data;
+  read_sswitch_reg(remote_id,0x80 + remote_link,data);
+  if (!(data & XLB_FIVEWIRE))
+  {
+    data |= XLB_FIVEWIRE;
+    write_sswitch_reg_no_ack_clean(remote_id,0x80 + remote_link,data);
+    read_sswitch_reg(local_id,0x80 + local_link,data);
+    data |= XLB_FIVEWIRE;
+    write_sswitch_reg_no_ack_clean(local_id,0x80 + local_link,data);
+  }
+  return;
+}

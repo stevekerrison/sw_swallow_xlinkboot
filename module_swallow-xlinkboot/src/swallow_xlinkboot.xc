@@ -131,7 +131,45 @@ static int swallow_xlinkboot_route_configure(unsigned r, unsigned c, unsigned ro
 /* Reconfigure all links in 5-wire mode */
 static void swallow_xlinkboot_go5(unsigned rows, unsigned cols, unsigned position)
 {
-
+  unsigned r,c,
+    lid = swallow_xlinkboot_genid(rows-1,cols-2+position) | 1,
+    rid = swallow_xlinkboot_genid(rows-1,cols-2+position);
+  xlinkboot_set5(lid,rid,XLB_L_LINKB,XLB_L_LINKB);
+  lid = rid;
+  rid = swallow_xlinkboot_genid(rows-1,cols-2+(!position));
+  xlinkboot_set5(lid,rid,XLB_L_LINKF,XLB_L_LINKG);
+  xlinkboot_set5(lid,rid,XLB_L_LINKG,XLB_L_LINKF);
+  xlinkboot_set5(lid,rid,XLB_L_LINKE,XLB_L_LINKH);
+  xlinkboot_set5(lid,rid,XLB_L_LINKH,XLB_L_LINKE);
+  c = cols - 3;
+  rid = swallow_xlinkboot_genid(rows-1,cols-1);
+  for (r = rows - 1; r >= 0; r -= 1)
+  {
+    for ( /* BLANK */ ; c >= 0; c -= 1)
+    {
+      lid = swallow_xlinkboot_genid(r,c);
+      if (c == cols - 1)
+      {
+        xlinkboot_set5(lid,rid,XLB_L_LINKF,XLB_L_LINKG);
+        xlinkboot_set5(lid,rid,XLB_L_LINKG,XLB_L_LINKF);
+        xlinkboot_set5(lid,rid,XLB_L_LINKE,XLB_L_LINKH);
+        xlinkboot_set5(lid,rid,XLB_L_LINKH,XLB_L_LINKE);
+      }
+      else if (c & 1)
+      {
+        xlinkboot_set5(lid,rid,XLB_L_LINKA,XLB_L_LINKB);
+      }
+      else
+      {
+        xlinkboot_set5(lid,rid,XLB_L_LINKF,XLB_L_LINKG);
+        xlinkboot_set5(lid,rid,XLB_L_LINKG,XLB_L_LINKF);
+        xlinkboot_set5(lid,rid,XLB_L_LINKE,XLB_L_LINKH);
+        xlinkboot_set5(lid,rid,XLB_L_LINKH,XLB_L_LINKE);
+      }
+    }
+    c = cols - 1;
+  }
+  return;
 }
 
 /* Function call to apply a configuration to an array of swallow boards */
@@ -244,8 +282,9 @@ int swallow_xlinkboot(unsigned boards_w, unsigned boards_h, unsigned reset, unsi
     }
   }
   /* Now my ID is wrong! So I must give myself a new one - our compute grid address with the P-bit set */
-  write_sswitch_reg_no_ack_clean(myid,0x5,swallow_xlinkboot_genid(rows-1,cols-1+position) | 1);
-  /* TODO: Reconfigure links in 5-wire mode */
+  write_sswitch_reg_no_ack_clean(myid,0x5,swallow_xlinkboot_genid(rows-1,cols-2+position) | 1);
+  /* 5-wire mode please! */
+  swallow_xlinkboot_go5(rows,cols,position);
   /* TODO: Test & bring up any connected peripheral links */
   
   return -SWXLB_GENERIC_FAIL;

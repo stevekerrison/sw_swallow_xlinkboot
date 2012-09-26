@@ -79,5 +79,7 @@ int xlinkboot_link_up(unsigned id, unsigned local_link,
   
 int xlinkboot_initial_configure(unsigned local_id, unsigned remote_id, unsigned local_link, unsigned remote_link,
   unsigned local_config, unsigned remote_config, struct xlinkboot_pll_t PLLs[], unsigned PLL_len, unsigned PLL_default);
+  
+void xlinkboot_set5(unsigned local_id, unsigned remote_id, unsigned local_link, unsigned remote_link);
 
 #endif //XLINKBOOT_H
