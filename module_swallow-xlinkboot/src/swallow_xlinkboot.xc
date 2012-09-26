@@ -50,7 +50,7 @@ void swallow_xlinkboot_server(chanend c_svr)
 }
 
 /* We now reprogram the switch to enable all desired links for the final network and do proper routing */
-int swallow_xlinkboot_route_configure(unsigned r, unsigned c)
+static int swallow_xlinkboot_route_configure(unsigned r, unsigned c, unsigned rows, unsigned cols, unsigned link_config)
 {
   unsigned id = swallow_xlinkboot_genid(r,c);
   unsigned dir, layer = (id >> SWXLB_LPOS) & MASK_FROM_BITS(SWXLB_LBITS);
@@ -72,7 +72,17 @@ int swallow_xlinkboot_route_configure(unsigned r, unsigned c)
         dir = layer ? SWXLB_DIR_RIGHT : SWXLB_DIR_DOWN;
         break;
     }
-    write_sswitch_reg_no_ack_clean(id,0x20 + i,dir << 8);
+    if ((i == XLB_L_LINKA && (r == 0 || c == 0)) ||
+      (i == XLB_L_LINKB && (r == rows-1 || c == cols-1)))
+    {
+      /* Skip over links that are peripheral links for now. TODO? */
+      continue;
+    }
+    else
+    {
+      write_sswitch_reg_no_ack_clean(id,0x20 + i,dir << 8);
+      write_sswitch_reg_no_ack_clean(id,0x20 + i,link_config | XLB_HELLO);
+    }
   }
   {
     unsigned row = id >> SWXLB_VPOS, col = (id >> SWXLB_HPOS) & MASK_FROM_BITS(SWXLB_HBITS),
@@ -224,7 +234,7 @@ int swallow_xlinkboot(unsigned boards_w, unsigned boards_h, unsigned reset, unsi
         write_sswitch_reg_clean(nid,0x20 + XLB_L_LINKA, XLB_ROUTE_AVOID);
         write_sswitch_reg_clean(nid,0x20 + XLB_L_LINKF, 0x00000100);
       }
-      swallow_xlinkboot_route_configure(r,c);
+      swallow_xlinkboot_route_configure(r,c,rows,cols,SWXLB_COMPUTE_LINK_CONFIG);
     }
   }
   /* TODO: Reconfigure links in 5-wire mode */
