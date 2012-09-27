@@ -2,8 +2,8 @@
 # compiled for. It either refers to an XN file in the source directories
 # or a valid argument for the --target option when compiling
 
-# Generic part to identify L series - Swallow boards are actually arrays of L2 chips
-TARGET = XS1-L01A-TQ128-C5
+# TODO: Replace with the XN
+TARGET = Swallow-SDRAM-256
 
 # The APP_NAME variable determines the name of the final .xe file. It should
 # not include the .xe postfix. If left blank the name will default to

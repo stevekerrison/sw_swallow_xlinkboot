@@ -15,6 +15,7 @@
  */
 
 #include <platform.h>
+#include <print.h>
 #include "swallow_xlinkboot.h"
 #include "swallow_comms.h"
 
@@ -196,6 +197,8 @@ int swallow_xlinkboot(unsigned boards_w, unsigned boards_h, unsigned reset, unsi
   write_sswitch_reg_clean(myid,0xc,0x0);
   write_sswitch_reg_clean(myid,0xd,0x0);
   
+  printstrln("Origin ready to start bringing up links");
+  
   /* Special cases to bring-up the corner, before we launch into generic bring-up of switches */
   if (position == SWXLB_POS_BOTTOM || position == SWXLB_POS_RIGHT)
   {
@@ -204,8 +207,11 @@ int swallow_xlinkboot(unsigned boards_w, unsigned boards_h, unsigned reset, unsi
     {
       rid &= ~(1 << SWXLB_LPOS);
     }
-    result = xlinkboot_initial_configure(myid, rid, XLB_L_LINKD, XLB_L_LINKB,
+    printstr("Init configure of core 0x");
+    printhexln(rid);
+    result = xlinkboot_initial_configure(myid, rid, XLB_L_LINKB, XLB_L_LINKB,
       SWXLB_PERIPH_LINK_CONFIG, SWXLB_COMPUTE_LINK_CONFIG, PLL, PLL_len, SWXLB_PLL_DEFAULT);
+    printstrln("Done init configure");
     /* TODO: What links will I need? */
     if (result < 0)
     {
@@ -223,6 +229,7 @@ int swallow_xlinkboot(unsigned boards_w, unsigned boards_h, unsigned reset, unsi
   {
     return -SWXLB_INVALID_PERIPHERAL_POS;
   }
+  printstrln("Do init configure on rest of grid");
   c = cols - 3;
   for (r = rows - 1; r >= 0; r -= 1)
   {
