@@ -25,7 +25,7 @@ static unsigned swallow_xlinkboot_genid(unsigned row, unsigned col)
 }
 
 /* Launch a server thread, receives configuration and then applies it */
-void swallow_xlinkboot_server(chanend c_svr)
+void swallow_xlinkboot_server(chanend c_svr, out port rst)
 {
   unsigned boards_w, boards_h, reset, PLL_len, position, ret, i;
   struct xlinkboot_pll_t PLL[XLB_PLL_LEN_MAX];
@@ -44,7 +44,7 @@ void swallow_xlinkboot_server(chanend c_svr)
     {
       c_svr <: -XLB_PLL_LENGTH;
     }
-    ret = swallow_xlinkboot(boards_w,boards_h,reset,position,PLL,PLL_len);
+    ret = swallow_xlinkboot(boards_w,boards_h,reset,position,PLL,PLL_len,rst);
     c_svr <: ret;
   }
   return;
@@ -173,9 +173,23 @@ static void swallow_xlinkboot_go5(unsigned rows, unsigned cols, unsigned positio
   return;
 }
 
+static void swallow_xlinkboot_reset(out port rst)
+{
+  timer t;
+  unsigned tv;
+  rst <: 0;
+  t :> tv;
+  tv += XLB_UP_DELAY;
+  t when timerafter(tv) :> void;
+  rst <: 1;
+  tv += XLB_UP_DELAY;
+  t when timerafter(tv) :> void;
+  return;
+}
+
 /* Function call to apply a configuration to an array of swallow boards */
 int swallow_xlinkboot(unsigned boards_w, unsigned boards_h, unsigned reset, unsigned position,
-  struct xlinkboot_pll_t PLL[], unsigned PLL_len)
+  struct xlinkboot_pll_t PLL[], unsigned PLL_len, out port rst)
 {
   unsigned cols = boards_w * SWXLB_CHIPS_W * SWXLB_CORES_CHIP,
     rows = boards_h * SWXLB_CHIPS_H,
@@ -189,6 +203,7 @@ int swallow_xlinkboot(unsigned boards_w, unsigned boards_h, unsigned reset, unsi
   {
     return -SWXLB_INVALID_BOARD_DIMENSIONS;
   }
+  swallow_xlinkboot_reset(rst);
   /* Make my ID something we can pre-boot the compute nodes from */
   myid = get_core_id();
   write_sswitch_reg_no_ack_clean(myid,0x5,XLB_ORIGIN_ID);

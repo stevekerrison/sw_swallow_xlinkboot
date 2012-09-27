@@ -97,8 +97,7 @@ int xlinkboot_initial_configure(unsigned local_id, unsigned remote_id, unsigned 
   unsigned local_config, unsigned remote_config, struct xlinkboot_pll_t PLLs[], unsigned PLL_len, unsigned PLL_default)
 {
   int result, i;
-  unsigned data, tv;
-  timer t;
+  unsigned data;
   printstrln("Pre-up");
   /* Make sure no links are considered outgoing (dir 0) at the start */
   for (i = 0; i < XLB_L_LINK_COUNT; i += 1)
@@ -120,8 +119,6 @@ int xlinkboot_initial_configure(unsigned local_id, unsigned remote_id, unsigned 
   /* Reprogram the PLL, triggering a soft-reset of the core & switch */
   printstrln("Programming PLL...");
   write_sswitch_reg_no_ack_clean(0,0x06,result == XLB_PLL_DEFAULT ? PLL_default : PLLs[result].val);
-  t :> tv;
-  t when timerafter(tv + XLB_UP_DELAY*1000) :> void;
   printstrln("Bringing link up again");
   result = xlinkboot_link_up(local_id, local_link, local_config, remote_link, remote_config);
   if (result < 0)

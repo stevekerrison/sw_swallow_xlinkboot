@@ -13,11 +13,14 @@
  * University of Illinois/NCSA Open Source License posted in
  * LICENSE.txt and at <http://github.xcore.com/>
  */
- 
+
+#include <platform.h>
 #include "swallow_xlinkboot.h"
+
+out port rst = XS1_PORT_1I;
 
 int main(void)
 {
   struct xlinkboot_pll_t PLLs[1] = {{-1,0,-1,0x00002700,0,4}};
-  return swallow_xlinkboot(1,1,1,SWXLB_POS_RIGHT,PLLs,1);
+  return swallow_xlinkboot(1,1,1,SWXLB_POS_RIGHT,PLLs,1,rst);
 }

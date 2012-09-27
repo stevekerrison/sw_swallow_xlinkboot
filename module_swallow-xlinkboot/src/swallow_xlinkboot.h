@@ -67,10 +67,10 @@
 #define SWXLB_INVALID_PERIPHERAL_POS    0x30000
 
 /* Launch a server thread, receives configuration and then applies it */
-void swallow_xlinkboot_server(chanend c_svr);
+void swallow_xlinkboot_server(chanend c_svr, out port rst);
 
 /* Function call to apply a configuration to an array of swallow boards */
 int swallow_xlinkboot(unsigned boards_w, unsigned boards_h, unsigned reset,
-  unsigned position, struct xlinkboot_pll_t PLL[], unsigned PLL_len); 
+  unsigned position, struct xlinkboot_pll_t PLL[], unsigned PLL_len, out port rst); 
   
 #endif //SWALLOW_XLINKBOOT_H
