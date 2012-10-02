@@ -179,7 +179,7 @@ static void swallow_xlinkboot_reset(out port rst)
   unsigned tv;
   rst <: 0;
   t :> tv;
-  tv += XLB_UP_DELAY;
+  tv += XLB_UP_DELAY*10;
   t when timerafter(tv) :> void;
   rst <: 1;
   tv += XLB_UP_DELAY;
@@ -222,16 +222,17 @@ int swallow_xlinkboot(unsigned boards_w, unsigned boards_h, unsigned reset, unsi
     {
       rid &= ~(1 << SWXLB_LPOS);
     }
-    printstr("Init configure of core 0x");
-    printhexln(rid);
+    //printstr("Init configure of core 0x");
+    //printhexln(rid);
     result = xlinkboot_initial_configure(myid, rid, XLB_L_LINKB, XLB_L_LINKB,
       SWXLB_PERIPH_LINK_CONFIG, SWXLB_COMPUTE_LINK_CONFIG, PLL, PLL_len, SWXLB_PLL_DEFAULT);
-    printstrln("Done init configure");
+    //printstrln("Done init configure");
     /* TODO: What links will I need? */
     if (result < 0)
     {
       return result;
     }
+    xlinkboot_other_links(rid,SWXLB_LINK_ENABLE_BEGIN,SWXLB_LINK_ENABLE_END,SWXLB_COMPUTE_LINK_CONFIG);
     /* Now bring up the other core */
     result = xlinkboot_initial_configure(rid,rid ^ ((position) << SWXLB_LPOS), XLB_L_LINKF, XLB_L_LINKG,
       SWXLB_COMPUTE_LINK_CONFIG, SWXLB_COMPUTE_LINK_CONFIG, PLL, PLL_len, SWXLB_PLL_DEFAULT);
@@ -239,6 +240,8 @@ int swallow_xlinkboot(unsigned boards_w, unsigned boards_h, unsigned reset, unsi
     {
       return result;
     }
+    xlinkboot_other_links(rid ^ ((position) << SWXLB_LPOS),
+      SWXLB_LINK_ENABLE_BEGIN, SWXLB_LINK_ENABLE_END, SWXLB_COMPUTE_LINK_CONFIG);
   }
   else
   {
@@ -248,27 +251,43 @@ int swallow_xlinkboot(unsigned boards_w, unsigned boards_h, unsigned reset, unsi
   c = cols - 3;
   for (r = rows - 1; r >= 0; r -= 1)
   {
+    /* Handle switching the bottom-right node's routing if we are booting from the right-link */
+    if (r == (rows - 2) && position == SWXLB_POS_RIGHT)
+    {
+      unsigned dstid = swallow_xlinkboot_genid(rows-1,cols-1);
+      printstr("Doing route fixup on 0x");printhexln(dstid);
+      write_sswitch_reg_clean(dstid,0x20 + XLB_L_LINKA, 0x00000200);
+      write_sswitch_reg_clean(dstid,0x20 + XLB_L_LINKF, 0x00000000);
+    }
     for ( /* BLANK */ ; c >= 0; c -= 1)
     {
       unsigned srcid, dstid = swallow_xlinkboot_genid(r,c);
-      /* Right-most core (layer 1) needs booting over internal-link */
+      //printstr("Col: ");printintln(c);
+      //printstr("Row: ");printintln(r);
+      /* Swap the right-most cores around to make them reachable */
+      /* Second-right-most core (layer 0) needs botting from the below core */
       if (c == (cols-1))
       {
-        srcid = swallow_xlinkboot_genid(r,cols-2);
-        result = xlinkboot_initial_configure(srcid, dstid, XLB_L_LINKF, XLB_L_LINKG,
+        srcid = swallow_xlinkboot_genid(r+1,cols-2);
+        dstid = swallow_xlinkboot_genid(r,cols-2);
+        //printstr("Boot 0x");printhex(dstid);printstr(" from 0x");printhexln(srcid);
+        result = xlinkboot_initial_configure(srcid, dstid, XLB_L_LINKA, XLB_L_LINKB,
           SWXLB_COMPUTE_LINK_CONFIG, SWXLB_COMPUTE_LINK_CONFIG, PLL, PLL_len, SWXLB_PLL_DEFAULT);
       }
-      /* Second-right-most core (layer 0) needs botting from the below core */
+      /*Right-most core (layer 1) needs booting over internal-link */
       else if (c == (cols-2))
       {
-        srcid = swallow_xlinkboot_genid(r+1,c);
-        result = xlinkboot_initial_configure(srcid, dstid, XLB_L_LINKA, XLB_L_LINKB,
+        srcid = swallow_xlinkboot_genid(r,cols-2);
+        dstid = swallow_xlinkboot_genid(r,cols-1);
+        //printstr("Boot 0x");printhex(dstid);printstr(" from 0x");printhexln(srcid);
+        result = xlinkboot_initial_configure(srcid, dstid, XLB_L_LINKF, XLB_L_LINKG,
           SWXLB_COMPUTE_LINK_CONFIG, SWXLB_COMPUTE_LINK_CONFIG, PLL, PLL_len, SWXLB_PLL_DEFAULT);
       }
       /* All other layer 1 cores are booted from their neighbour over link B */
       else if (c & 1)
       {
         srcid = swallow_xlinkboot_genid(r,c+2);
+        //printstr("Boot 0x");printhex(dstid);printstr(" from 0x");printhexln(srcid);
         result = xlinkboot_initial_configure(srcid, dstid, XLB_L_LINKA, XLB_L_LINKB,
           SWXLB_COMPUTE_LINK_CONFIG, SWXLB_COMPUTE_LINK_CONFIG, PLL, PLL_len, SWXLB_PLL_DEFAULT);
       }
@@ -276,6 +295,7 @@ int swallow_xlinkboot(unsigned boards_w, unsigned boards_h, unsigned reset, unsi
       else
       {
         srcid = swallow_xlinkboot_genid(r,c+1);
+        //printstr("Boot 0x");printhex(dstid);printstr(" from 0x");printhexln(srcid);
         result = xlinkboot_initial_configure(srcid, dstid, XLB_L_LINKF, XLB_L_LINKG,
           SWXLB_COMPUTE_LINK_CONFIG, SWXLB_COMPUTE_LINK_CONFIG, PLL, PLL_len, SWXLB_PLL_DEFAULT);
       }
@@ -284,6 +304,7 @@ int swallow_xlinkboot(unsigned boards_w, unsigned boards_h, unsigned reset, unsi
     /* Update c here to allow initial skip */
     c = cols - 1;
   }
+  printstrln("All cores initialised, ready to setup routes");
   for (r = 0; r < rows; r += 1)
   {
     /* Neighbour's ID */
