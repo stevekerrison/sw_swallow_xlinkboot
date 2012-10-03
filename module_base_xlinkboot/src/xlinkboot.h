@@ -60,7 +60,9 @@ struct xlinkboot_pll_t {
 #define XLB_ENABLE            0x80000000
 #define XLB_FIVEWIRE          0x40000000
 
-#define XLB_ROUTE_AVOID       0x000002f0
+#define XLB_ROUTE_AVOID       0x00000ff0
+
+#define XLB_ROUTE_RETURN      0xe
 
 /* Dir/net masks */
 #define XLB_DIR_MASK          0x00000f00

@@ -30,9 +30,9 @@ int xlinkboot_link_up(unsigned id, unsigned local_link,
   unsigned data, tv;
   timer t;
   /* Put the link on a different network to avoid routing garbage */
-  write_sswitch_reg_clean(id,0x20 + local_link,XLB_ROUTE_AVOID);
-  write_sswitch_reg_clean(id,0x80 + local_link,0x00800000);
-  write_sswitch_reg_clean(id,0x80 + local_link,local_config);
+  write_sswitch_reg_no_ack_clean(id,0x20 + local_link,XLB_ROUTE_AVOID);
+  write_sswitch_reg_no_ack_clean(id,0x80 + local_link,0x00800000);
+  write_sswitch_reg_no_ack_clean(id,0x80 + local_link,local_config);
   read_sswitch_reg(id,0x80 + local_link,data);
   //printstrln("Issuing HELLO");
   while((data & (XLB_ERR | XLB_CAN_TX)) != XLB_CAN_TX)
@@ -41,7 +41,7 @@ int xlinkboot_link_up(unsigned id, unsigned local_link,
     {
       return -XLB_LINK_FAIL;
     }
-    write_sswitch_reg_clean(id,0x80 + local_link, local_config | XLB_HELLO);
+    write_sswitch_reg_no_ack_clean(id,0x80 + local_link, local_config | XLB_HELLO);
     t :> tv;
     tv += XLB_UP_DELAY;
     t when timerafter(tv) :> void;
@@ -49,7 +49,7 @@ int xlinkboot_link_up(unsigned id, unsigned local_link,
   }
   //printstrln("Got CREDIT, getting remote to issue HELLO too");
   /* Looks promising... now put us on the outbound route so we can talk to node 0 */
-  write_sswitch_reg_clean(id,0x20 + local_link,0x00000000);
+  write_sswitch_reg_no_ack_clean(id,0x20 + local_link,0x00000000);
   /* Ask the remote switch to change speed and issue a HELLO back to us */
   write_sswitch_reg_no_ack_clean(0,0x80 + remote_link, remote_config | XLB_HELLO);
   while((data & (XLB_ERR | XLB_CAN_TX | XLB_CAN_RX)) != (XLB_CAN_TX | XLB_CAN_RX))
@@ -73,8 +73,8 @@ void xlinkboot_other_links(unsigned id, unsigned start, unsigned end, unsigned c
     if (!(data & XLB_ENABLE))
     {
       /* Put the link on a different network to avoid routing garbage */
-      write_sswitch_reg_clean(id,0x20 + i,XLB_ROUTE_AVOID);
-      write_sswitch_reg_clean(id,0x80 + i,config);
+      write_sswitch_reg_no_ack_clean(id,0x20 + i,XLB_ROUTE_AVOID);
+      write_sswitch_reg_no_ack_clean(id,0x80 + i,config);
     }
   }
   return;
@@ -106,7 +106,7 @@ int xlinkboot_initial_configure(unsigned local_id, unsigned remote_id, unsigned 
     read_sswitch_reg(local_id,0x20 + i,data);
     if ((data & XLB_DIR_MASK) >> XLB_DIR_SHIFT == 0)
     {
-      write_sswitch_reg_clean(local_id,0x20 + i,0x00000200);
+      write_sswitch_reg_clean(local_id,0x20 + i,XLB_ROUTE_AVOID);
     }
   }
   //printstrln("Ready to up");
@@ -138,11 +138,11 @@ int xlinkboot_initial_configure(unsigned local_id, unsigned remote_id, unsigned 
   }
   //printstrln("Clock dividers are set");
   /* Make the route back to me follow direction "1" */    
-  write_sswitch_reg_no_ack_clean(0,0x20 + remote_link,0x00000100);
+  write_sswitch_reg_no_ack_clean(0,0x20 + remote_link,XLB_ROUTE_RETURN << XLB_DIR_SHIFT);
   //printstrln("Remote link attached to dir 1");
   /* Initial routing tables, everything not for us goes out on direction 0, except bit-15 which returns to origin */
   write_sswitch_reg_no_ack_clean(0,0xc,0x00000000);
-  write_sswitch_reg_no_ack_clean(0,0xd,0x10000000);
+  write_sswitch_reg_no_ack_clean(0,0xd,XLB_ROUTE_RETURN << (7*XLB_DIR_BITS));
   //printstrln("Routes configured");
   /* Set up my real node ID */
   write_sswitch_reg_no_ack_clean(0,0x05,remote_id);
