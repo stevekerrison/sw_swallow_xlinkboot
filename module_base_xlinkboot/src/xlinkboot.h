@@ -60,7 +60,7 @@ struct xlinkboot_pll_t {
 #define XLB_ENABLE            0x80000000
 #define XLB_FIVEWIRE          0x40000000
 
-#define XLB_ROUTE_AVOID       0x00000ff0
+#define XLB_ROUTE_AVOID       0x00000f30
 
 #define XLB_ROUTE_RETURN      0xe
 
@@ -73,11 +73,14 @@ struct xlinkboot_pll_t {
 
 unsigned xlinkboot_pll_search(unsigned id, struct xlinkboot_pll_t PLLs[], unsigned PLL_len);
 
-void xlinkboot_other_links(unsigned id, unsigned start, unsigned end, unsigned config);
-
 /* Enable and bring-up a link */
 int xlinkboot_link_up(unsigned id, unsigned local_link,
   unsigned local_config, unsigned remote_link, unsigned remote_config);
+  
+int xlinkboot_secondary_link_up(unsigned lid, unsigned local_link,
+  unsigned local_config, unsigned rid, unsigned remote_link, unsigned remote_config);
+  
+int xlinkboot_half_link_up(unsigned id, unsigned link, unsigned config);
   
 int xlinkboot_initial_configure(unsigned local_id, unsigned remote_id, unsigned local_link, unsigned remote_link,
   unsigned local_config, unsigned remote_config, struct xlinkboot_pll_t PLLs[], unsigned PLL_len, unsigned PLL_default);

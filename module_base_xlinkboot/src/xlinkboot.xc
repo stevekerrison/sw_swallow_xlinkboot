@@ -15,7 +15,6 @@
  */
  
 #include <platform.h>
-#include <print.h>
 #include "xlinkboot.h"
 #include "swallow_comms.h"
 
@@ -34,7 +33,6 @@ int xlinkboot_link_up(unsigned id, unsigned local_link,
   write_sswitch_reg_no_ack_clean(id,0x80 + local_link,0x00800000);
   write_sswitch_reg_no_ack_clean(id,0x80 + local_link,local_config);
   read_sswitch_reg(id,0x80 + local_link,data);
-  //printstrln("Issuing HELLO");
   while((data & (XLB_ERR | XLB_CAN_TX)) != XLB_CAN_TX)
   {
     if (data & XLB_ERR)
@@ -47,7 +45,6 @@ int xlinkboot_link_up(unsigned id, unsigned local_link,
     t when timerafter(tv) :> void;
     read_sswitch_reg(id,0x80 + local_link,data);
   }
-  //printstrln("Got CREDIT, getting remote to issue HELLO too");
   /* Looks promising... now put us on the outbound route so we can talk to node 0 */
   write_sswitch_reg_no_ack_clean(id,0x20 + local_link,0x00000000);
   /* Ask the remote switch to change speed and issue a HELLO back to us */
@@ -60,24 +57,66 @@ int xlinkboot_link_up(unsigned id, unsigned local_link,
       return -XLB_LINK_FAIL;
     }
   }
-  //printstrln("Remote got CREDIT. Link is up!");
   return 0;
 }
 
-void xlinkboot_other_links(unsigned id, unsigned start, unsigned end, unsigned config)
+int xlinkboot_half_link_up(unsigned id, unsigned link, unsigned config)
 {
-  unsigned data, i;
-  for (i = start; i < end; i += 1)
+  unsigned data = 0, tv;
+  timer t;
+  /* Put the links on a different network to avoid routing garbage */
+  write_sswitch_reg_no_ack_clean(id,0x20 + link,XLB_ROUTE_AVOID);
+  while((data & (XLB_ERR | XLB_CAN_TX)) != XLB_CAN_TX)
   {
-    read_sswitch_reg(id,0x80 + i,data);
-    if (!(data & XLB_ENABLE))
+    if (data & XLB_ERR)
     {
-      /* Put the link on a different network to avoid routing garbage */
-      write_sswitch_reg_no_ack_clean(id,0x20 + i,XLB_ROUTE_AVOID);
-      write_sswitch_reg_no_ack_clean(id,0x80 + i,config);
+      return -XLB_LINK_FAIL;
+    }
+    write_sswitch_reg_no_ack_clean(id,0x80 + link, config | XLB_HELLO);
+    t :> tv;
+    tv += XLB_UP_DELAY;
+    t when timerafter(tv) :> void;
+    read_sswitch_reg(id,0x80 + link,data);
+  }
+  return 0;
+}
+
+/** 
+ * Bring up a secondary link on a pair of already reachable switches
+**/
+int xlinkboot_secondary_link_up(unsigned lid, unsigned local_link,
+  unsigned local_config, unsigned rid, unsigned remote_link, unsigned remote_config)
+{
+  unsigned data, tv;
+  timer t;
+  /* Put the links on a different network to avoid routing garbage */
+  write_sswitch_reg_no_ack_clean(lid,0x20 + local_link,XLB_ROUTE_AVOID);
+  write_sswitch_reg_no_ack_clean(rid,0x20 + remote_link,XLB_ROUTE_AVOID);
+  read_sswitch_reg(lid,0x80 + local_link,data);
+  //printstrln("Issuing HELLO");
+  while((data & (XLB_ERR | XLB_CAN_TX)) != XLB_CAN_TX)
+  {
+    if (data & XLB_ERR)
+    {
+      return -XLB_LINK_FAIL;
+    }
+    write_sswitch_reg_no_ack_clean(lid,0x80 + local_link, local_config | XLB_HELLO);
+    t :> tv;
+    tv += XLB_UP_DELAY;
+    t when timerafter(tv) :> void;
+    read_sswitch_reg(lid,0x80 + local_link,data);
+  }
+  /* Ask the remote switch to change speed and issue a HELLO back to us */
+  write_sswitch_reg_no_ack_clean(rid,0x80 + remote_link, remote_config | XLB_HELLO);
+  while((data & (XLB_ERR | XLB_CAN_TX | XLB_CAN_RX)) != (XLB_CAN_TX | XLB_CAN_RX))
+  {
+    read_sswitch_reg(lid,0x80 + local_link,data);
+    if (data & XLB_ERR)
+    {
+      return -XLB_LINK_FAIL;
     }
   }
-  return;
+  return 0;
 }
 
 unsigned xlinkboot_pll_search(unsigned id, struct xlinkboot_pll_t PLLs[], unsigned PLL_len)
@@ -99,7 +138,6 @@ int xlinkboot_initial_configure(unsigned local_id, unsigned remote_id, unsigned 
   int result, i;
   unsigned data, tv;
   timer t;
-  //printstrln("Pre-up");
   /* Make sure no links are considered outgoing (dir 0) at the start */
   for (i = 0; i < XLB_L_LINK_COUNT; i += 1)
   {
@@ -109,63 +147,51 @@ int xlinkboot_initial_configure(unsigned local_id, unsigned remote_id, unsigned 
       write_sswitch_reg_clean(local_id,0x20 + i,XLB_ROUTE_AVOID);
     }
   }
-  //printstrln("Ready to up");
   result = xlinkboot_link_up(local_id, local_link, local_config, remote_link, remote_config);
   if (result < 0)
   {
     return result;
   }
-  //printstrln("Done up");
   result = xlinkboot_pll_search(remote_id, PLLs, PLL_len);
   /* Reprogram the PLL, triggering a soft-reset of the core & switch */
-  //printstrln("Programming PLL...");
   write_sswitch_reg_no_ack_clean(0,0x06,result == XLB_PLL_DEFAULT ? PLL_default : PLLs[result].val);
   t :> tv;
   tv += XLB_UP_DELAY * 20;
   t when timerafter(tv) :> void;
-  //printstrln("Bringing link up again");
   result = xlinkboot_link_up(local_id, local_link, local_config, remote_link, remote_config);
   if (result < 0)
   {
     return result;
   }
-  //printstrln("Done second init of link");
   /* Now set the ref and switch clock dividers (no reset required) */
   if (result != XLB_PLL_DEFAULT)
   {
     write_sswitch_reg_no_ack_clean(0,0x7,PLLs[result].switch_div);
     write_sswitch_reg_no_ack_clean(0,0x8,PLLs[result].ref_div);
   }
-  //printstrln("Clock dividers are set");
   /* Make the route back to me follow direction "1" */    
   write_sswitch_reg_no_ack_clean(0,0x20 + remote_link,XLB_ROUTE_RETURN << XLB_DIR_SHIFT);
-  //printstrln("Remote link attached to dir 1");
   /* Initial routing tables, everything not for us goes out on direction 0, except bit-15 which returns to origin */
   write_sswitch_reg_no_ack_clean(0,0xc,0x00000000);
   write_sswitch_reg_no_ack_clean(0,0xd,XLB_ROUTE_RETURN << (7*XLB_DIR_BITS));
-  //printstrln("Routes configured");
   /* Set up my real node ID */
   write_sswitch_reg_no_ack_clean(0,0x05,remote_id);
   read_sswitch_reg(remote_id,0x05,data);
-  //printstr("Node ID set to 0x");
-  //printhexln(data);
   read_sswitch_reg(remote_id,0x06,data);
-  //printstr("PLL is 0x");
-  //printhexln(data);
   return remote_id;
 }
 
 void xlinkboot_set5(unsigned local_id, unsigned remote_id, unsigned local_link, unsigned remote_link)
 {
-  unsigned data;
-  read_sswitch_reg(remote_id,0x80 + remote_link,data);
-  if (!(data & XLB_FIVEWIRE))
+  unsigned ldata,rdata;
+  read_sswitch_reg(local_id,0x80 + local_link,ldata);
+  read_sswitch_reg(remote_id,0x80 + remote_link,rdata);
+  if (!(ldata & XLB_FIVEWIRE))
   {
-    data |= XLB_FIVEWIRE;
-    write_sswitch_reg_no_ack_clean(remote_id,0x80 + remote_link,data);
-    read_sswitch_reg(local_id,0x80 + local_link,data);
-    data |= XLB_FIVEWIRE;
-    write_sswitch_reg_no_ack_clean(local_id,0x80 + local_link,data);
+    rdata |= XLB_FIVEWIRE;
+    write_sswitch_reg_no_ack_clean(remote_id,0x80 + remote_link,rdata);
+    ldata |= XLB_FIVEWIRE;
+    write_sswitch_reg_no_ack_clean(local_id,0x80 + local_link,ldata);
   }
   return;
 }
