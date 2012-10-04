@@ -30,7 +30,7 @@ Known Issues
 Required Repositories
 ================
 
-sc_swallow_communication (https://github.com/stevekerrison/sw_swallow_communication)
+sc_swallow_communication (https://github.com/stevekerrison/sc_swallow_communication)
 
 Support
 =======
