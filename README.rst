@@ -1,7 +1,7 @@
 Swallow (XMP-16) network setup and bootloader
 .......
 
-:Version:  0.0.1
+:Version:  0.0.2
 
 :Status:  Alpha
 
@@ -16,11 +16,12 @@ Key Features
 * Allow mesh networks of XMP16s to be assembled
 * Bring up network from a single source node on the edge of the compute network
 * Allow PLL configuration
+* Provides core reset via a 1-bit port
 
 To Do
 =====
 
-* Provide reset capability if source I/O supports it
+* Lots, see commit logs and comments
 
 Known Issues
 ============
@@ -29,6 +30,7 @@ Known Issues
 Required Repositories
 ================
 
+sc_swallow_communications (https://github.com/stevekerrison/sw_swallow_xlinkboot)
 
 Support
 =======
