@@ -88,7 +88,7 @@ static int swallow_xlinkboot_route_configure(unsigned r, unsigned c, unsigned ro
     unsigned dirbits[2];
     if (layer)
     {
-      pdirbit = (row == 0) ? SWXLB_DIR_LEFT : SWXLB_DIR_RIGHT;
+      pdirbit = (col == 0) ? SWXLB_DIR_LEFT : SWXLB_DIR_RIGHT;
       xscopedirbits = row == 1 ? SWXLB_DIR_LEFT : SWXLB_DIR_AWAY;
       for (i = 0; i < SWXLB_VBITS; i++)
       {
@@ -103,7 +103,7 @@ static int swallow_xlinkboot_route_configure(unsigned r, unsigned c, unsigned ro
     }
     else
     {
-      pdirbit = (col == 0) ? SWXLB_DIR_UP : SWXLB_DIR_DOWN;
+      pdirbit = (row == 0) ? SWXLB_DIR_UP : SWXLB_DIR_DOWN;
       xscopedirbits = ((row == 0) ? SWXLB_DIR_DOWN : ((row == 1) ? SWXLB_DIR_AWAY : SWXLB_DIR_UP));
       for (i = 0; i < SWXLB_HBITS; i++)
       {
@@ -338,7 +338,8 @@ int swallow_xlinkboot(unsigned boards_w, unsigned boards_h, unsigned reset, unsi
     /* Yes, this is unnecessary, but consider it a soft-test that it worked :) */
     read_sswitch_reg(nid,0x5,myid);
   }
-  read_sswitch_reg(0,0x5,data);
+  /* Just checking we can communicate across the network - not exactly a thorough test but it should catch
+   * if things are really boned */
   read_sswitch_reg(0x0,0x5,data);
 
   /* TODO: Test & bring up any connected peripheral links */
