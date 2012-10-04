@@ -30,7 +30,7 @@ Known Issues
 Required Repositories
 ================
 
-sc_swallow_communications (https://github.com/stevekerrison/sw_swallow_xlinkboot)
+sc_swallow_communications (https://github.com/stevekerrison/sw_swallow_communications)
 
 Support
 =======
