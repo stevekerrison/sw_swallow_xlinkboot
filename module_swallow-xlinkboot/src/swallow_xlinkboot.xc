@@ -15,12 +15,82 @@
  */
 
 #include <platform.h>
+#include <print.h>
 #include "swallow_xlinkboot.h"
 #include "swallow_comms.h"
+
+void prog(void)
+{
+    /* Light 'em up */
+    /*"not r0,r0\n"
+    "bu -0x2\n"
+    "ldc r0,0x802\n"
+    "shl r0,r0,8\n"
+    "setc res[r0],0\n"
+    "ldc r0,0x1001\n"
+    "shl r0,r0,8\n"
+    "setc res[r0],0\n"
+    "ldc r0,0xf\n"
+    "ldc r1,0x405\n"
+	  "shl r1,r1,8\n"
+	  "setc res[r1],8\n"
+	  "out res[r1],r0\n"
+	  "bu -0x1\n"*/
+  asm(".align 4\n"
+    "bootprog_code:\n"
+    "ldc r0,0xf\n"
+    "ldc r1,0x405\n"
+	  "shl r1,r1,8\n"
+	  "setc res[r1],8\n"
+	  "out res[r1],r0\n"
+	  "bu -0x1\n"
+	  /* Jump back to the bootloader. */
+  	"ldc r0,0\n"
+  	"not r0,r0\n"
+  	"ldc r1,0x3fff\n"
+  	"sub r0,r0,r1\n"
+  	"bau r0\n"
+  	"nop\nnop\nnop\n"
+  	"bootprog_code_end:":::"r0,r1");
+}
 
 static unsigned swallow_xlinkboot_genid(unsigned row, unsigned col)
 {
   return (row << SWXLB_VPOS) | (col << SWXLB_LPOS);
+}
+
+static void bootprog(unsigned rows, unsigned cols)
+{
+  unsigned ce = getChanend(0x2), r, c, id, size, crc = 0xd15ab1e, loc, i, word;
+  asm("ldap r11,bootprog_code\n"
+    "mov %0,r11\n"
+    "ldap r11,bootprog_code_end\n"
+    "sub %0,r11,%0\n"
+    "shr %0,%0,2":"=r"(size):);
+  for (r = 0; r < rows; r += 1)
+  {
+    for (c = 0; c < cols; c += 1)
+    {
+      asm("ldap r11,bootprog_code\n"
+        "mov %0,r11":"=r"(loc)::"r11");
+      id = swallow_xlinkboot_genid(r,c);
+      //printhex(id);
+      setDestination(ce,(id << 16) | 0x2);
+      asm("out res[%0],%0\n"
+        "out res[%0],%1"::"r"(ce),"r"(size));
+      for (i = loc; i < loc + (size*4); i += 4)
+      {
+        asm("ldw %0,%1[0]\n"
+          "out res[%2],%0\n":"=r"(word):"r"(i),"r"(ce));
+        //printchar('.');
+      }
+      //printcharln('\0');
+      asm("out res[%0],%1\n"::"r"(ce),"r"(crc));
+      asm("outct res[%0],1\n"
+        "chkct res[%0],1\n"::"r"(ce));
+    }
+  }
+  freeChanend(ce);
 }
 
 /* Launch a server thread, receives configuration and then applies it */
@@ -130,10 +200,10 @@ static void swallow_xlinkboot_reset(out port rst)
   unsigned tv;
   rst <: 0;
   t :> tv;
-  tv += XLB_UP_DELAY*10;
+  tv += XLB_RST_PULSE;
   t when timerafter(tv) :> void;
   rst <: 1;
-  tv += XLB_UP_DELAY*100;
+  tv += XLB_RST_INIT;
   t when timerafter(tv) :> void;
   return;
 }
@@ -341,7 +411,8 @@ int swallow_xlinkboot(unsigned boards_w, unsigned boards_h, unsigned reset, unsi
   /* Just checking we can communicate across the network - not exactly a thorough test but it should catch
    * if things are really boned */
   read_sswitch_reg(0x0,0x5,data);
-
+  /* Now run a tiny program to test the cores and let there be light! */
+  bootprog(rows,cols);
   /* TODO: Test & bring up any connected peripheral links */
   return 0;
 }

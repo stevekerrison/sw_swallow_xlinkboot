@@ -156,7 +156,7 @@ int xlinkboot_initial_configure(unsigned local_id, unsigned remote_id, unsigned 
   /* Reprogram the PLL, triggering a soft-reset of the core & switch */
   write_sswitch_reg_no_ack_clean(0,0x06,result == XLB_PLL_DEFAULT ? PLL_default : PLLs[result].val);
   t :> tv;
-  tv += XLB_UP_DELAY * 20;
+  tv += XLB_RST_INIT;
   t when timerafter(tv) :> void;
   result = xlinkboot_link_up(local_id, local_link, local_config, remote_link, remote_config);
   if (result < 0)

@@ -51,6 +51,9 @@ struct xlinkboot_pll_t {
 #define XLB_PLL_DEFAULT       -1
 #define XLB_PLL_LEN_MAX       128
 
+#define XLB_RST_PULSE         0x800
+#define XLB_RST_INIT          0x10000
+
 /* TODO: PLL-based calculation of what the delay should be */
 #define XLB_UP_DELAY          0x1000
 #define XLB_HELLO             0x01000000
