@@ -38,6 +38,9 @@ void prog(void)
 	  "bu -0x1\n"*/
   asm(".align 4\n"
     "bootprog_code:\n"
+    "ldc r0,6\n"
+    "setc res[r0],0x8\n"
+    "setc res[r0],0xf\n"
     "ldc r0,0xf\n"
     "ldc r1,0x405\n"
 	  "shl r1,r1,8\n"
