@@ -36,7 +36,7 @@ void prog(void)
 	  "setc res[r1],8\n"
 	  "out res[r1],r0\n"
 	  "bu -0x1\n"*/
-  asm(".align 4\n"
+  /*asm(".align 4\n"
     "bootprog_code:\n"
     "ldc r0,6\n"
     "setc res[r0],0x8\n"
@@ -46,15 +46,15 @@ void prog(void)
 	  "shl r1,r1,8\n"
 	  "setc res[r1],8\n"
 	  "out res[r1],r0\n"
-	  "bu -0x1\n"
+	  "bu -0x1\n"*/
 	  /* Jump back to the bootloader. */
-  	"ldc r0,0\n"
+  	/*"ldc r0,0\n"
   	"not r0,r0\n"
   	"ldc r1,0x3fff\n"
   	"sub r0,r0,r1\n"
   	"bau r0\n"
   	"nop\nnop\nnop\n"
-  	"bootprog_code_end:":::"r0,r1");
+  	"bootprog_code_end:":::"r0,r1");*/
 }
 
 static unsigned swallow_xlinkboot_genid(unsigned row, unsigned col)
@@ -65,7 +65,7 @@ static unsigned swallow_xlinkboot_genid(unsigned row, unsigned col)
 static void bootprog(unsigned rows, unsigned cols)
 {
   unsigned ce = getChanend(0x2), r, c, id, size, crc = 0xd15ab1e, loc, i, word;
-  asm("ldap r11,bootprog_code\n"
+  /*asm("ldap r11,bootprog_code\n"
     "mov %0,r11\n"
     "ldap r11,bootprog_code_end\n"
     "sub %0,r11,%0\n"
@@ -92,7 +92,7 @@ static void bootprog(unsigned rows, unsigned cols)
       asm("outct res[%0],1\n"
         "chkct res[%0],1\n"::"r"(ce));
     }
-  }
+  }*/
   freeChanend(ce);
 }
 
@@ -247,7 +247,7 @@ int swallow_xlinkboot(unsigned boards_w, unsigned boards_h, unsigned reset, unsi
   }
   swallow_xlinkboot_reset(rst);
   /* Make my ID something we can pre-boot the compute nodes from */
-  myid = get_core_id();
+  myid = get_local_tile_id();
   write_sswitch_reg_no_ack_clean(myid,0x5,XLB_ORIGIN_ID);
   myid = XLB_ORIGIN_ID;
   /* We are origin for now, everything routes out of us... */
@@ -302,6 +302,7 @@ int swallow_xlinkboot(unsigned boards_w, unsigned boards_h, unsigned reset, unsi
       {
         srcid = swallow_xlinkboot_genid(r+1,cols-2);
         dstid = swallow_xlinkboot_genid(r,cols-2);
+        //printhexln(dstid);
         result = xlinkboot_initial_configure(srcid, dstid, XLB_L_LINKA, XLB_L_LINKB,
           SWXLB_COMPUTE_LINK_CONFIG, SWXLB_COMPUTE_LINK_CONFIG, PLL, PLL_len, SWXLB_PLL_DEFAULT);
       }
@@ -310,6 +311,7 @@ int swallow_xlinkboot(unsigned boards_w, unsigned boards_h, unsigned reset, unsi
       {
         srcid = swallow_xlinkboot_genid(r,cols-2);
         dstid = swallow_xlinkboot_genid(r,cols-1);
+        //printhexln(dstid);
         result = xlinkboot_initial_configure(srcid, dstid, XLB_L_LINKF, XLB_L_LINKG,
           SWXLB_COMPUTE_LINK_CONFIG, SWXLB_COMPUTE_LINK_CONFIG, PLL, PLL_len, SWXLB_PLL_DEFAULT);
         swallow_xlinkboot_internal_links(srcid,dstid);
@@ -318,6 +320,7 @@ int swallow_xlinkboot(unsigned boards_w, unsigned boards_h, unsigned reset, unsi
       else if (c & 1)
       {
         srcid = swallow_xlinkboot_genid(r,c+2);
+        //printhexln(dstid);
         result = xlinkboot_initial_configure(srcid, dstid, XLB_L_LINKA, XLB_L_LINKB,
           SWXLB_COMPUTE_LINK_CONFIG, SWXLB_COMPUTE_LINK_CONFIG, PLL, PLL_len, SWXLB_PLL_DEFAULT);
       }
@@ -325,6 +328,7 @@ int swallow_xlinkboot(unsigned boards_w, unsigned boards_h, unsigned reset, unsi
       else
       {
         srcid = swallow_xlinkboot_genid(r,c+1);
+        //printhexln(dstid);
         result = xlinkboot_initial_configure(srcid, dstid, XLB_L_LINKF, XLB_L_LINKG,
           SWXLB_COMPUTE_LINK_CONFIG, SWXLB_COMPUTE_LINK_CONFIG, PLL, PLL_len, SWXLB_PLL_DEFAULT);
         swallow_xlinkboot_internal_links(srcid,dstid);

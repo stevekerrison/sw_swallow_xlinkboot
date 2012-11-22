@@ -15,6 +15,7 @@
  */
  
 #include <platform.h>
+#include <print.h>
 #include "xlinkboot.h"
 #include "swallow_comms.h"
 
@@ -45,6 +46,10 @@ int xlinkboot_link_up(unsigned id, unsigned local_link,
     t when timerafter(tv) :> void;
     read_sswitch_reg(id,0x80 + local_link,data);
   }
+  t :> tv;
+  tv += XLB_UP_DELAY*10;
+  t when timerafter(tv) :> void;
+  //printstrln("GOT HELLO");
   /* Looks promising... now put us on the outbound route so we can talk to node 0 */
   write_sswitch_reg_no_ack_clean(id,0x20 + local_link,0x00000000);
   /* Ask the remote switch to change speed and issue a HELLO back to us */
