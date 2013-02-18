@@ -17,6 +17,15 @@
 #ifndef XLINKBOOT_H
 #define XLINKBOOT_H
 
+#define DEBUG
+#ifndef DBG
+#ifdef DEBUG
+#define DBG(fn,...) fn(__VA_ARGS__)
+#else
+#define DBG(...) 
+#endif
+#endif
+
 /* Help program groups of chips with PLL values */
 struct xlinkboot_pll_t {
   unsigned mask;
@@ -51,11 +60,11 @@ struct xlinkboot_pll_t {
 #define XLB_PLL_DEFAULT       -1
 #define XLB_PLL_LEN_MAX       128
 
-#define XLB_RST_PULSE         0x800
-#define XLB_RST_INIT          0x10000
+#define XLB_RST_PULSE         0x8000
+#define XLB_RST_INIT          0x80000
 
 /* TODO: PLL-based calculation of what the delay should be */
-#define XLB_UP_DELAY          0x1000
+#define XLB_UP_DELAY          0x8000
 #define XLB_HELLO             0x01000000
 #define XLB_CAN_TX            0x02000000
 #define XLB_CAN_RX            0x04000000
@@ -73,6 +82,8 @@ struct xlinkboot_pll_t {
 #define XLB_DIR_BITS          4
 #define XLB_NET_MASK          0x000000f0
 #define XLB_NET_SHIFT         4
+
+unsigned xlinkboot_disable_links(unsigned id);
 
 unsigned xlinkboot_pll_search(unsigned id, struct xlinkboot_pll_t PLLs[], unsigned PLL_len);
 

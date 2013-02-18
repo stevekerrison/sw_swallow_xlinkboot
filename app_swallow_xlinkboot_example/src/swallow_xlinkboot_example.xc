@@ -15,12 +15,17 @@
  */
 
 #include <platform.h>
+#include <print.h>
 #include "swallow_xlinkboot.h"
 
-out port rst = XS1_PORT_1I;
+out port rst = XS1_PORT_1D; //I on old, D on new
 
 int main(void)
 {
+  int result;
   struct xlinkboot_pll_t PLLs[1] = {{-1,0,-1,0x00002700,1,5}};
-  return swallow_xlinkboot(1,2,1,SWXLB_POS_RIGHT,PLLs,1,rst);
+  result = swallow_xlinkboot(1,1,1,SWXLB_POS_BOTTOM,PLLs,1,rst);
+  printstr("Result: ");
+  printintln(result);
+  return result;
 }

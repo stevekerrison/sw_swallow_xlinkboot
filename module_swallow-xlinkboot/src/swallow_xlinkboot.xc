@@ -201,8 +201,11 @@ static void swallow_xlinkboot_reset(out port rst)
 {
   timer t;
   unsigned tv;
-  rst <: 0;
   t :> tv;
+  rst <: 1;
+  tv += XLB_RST_INIT;
+  t when timerafter(tv) :> void;
+  rst <: 0;
   tv += XLB_RST_PULSE;
   t when timerafter(tv) :> void;
   rst <: 1;
@@ -245,7 +248,6 @@ int swallow_xlinkboot(unsigned boards_w, unsigned boards_h, unsigned reset, unsi
   {
     return -SWXLB_INVALID_BOARD_DIMENSIONS;
   }
-  swallow_xlinkboot_reset(rst);
   /* Make my ID something we can pre-boot the compute nodes from */
   myid = get_local_tile_id();
   write_sswitch_reg_no_ack_clean(myid,0x5,XLB_ORIGIN_ID);
@@ -253,7 +255,11 @@ int swallow_xlinkboot(unsigned boards_w, unsigned boards_h, unsigned reset, unsi
   /* We are origin for now, everything routes out of us... */
   write_sswitch_reg_no_ack_clean(myid,0xc,0x0);
   write_sswitch_reg_no_ack_clean(myid,0xd,0x0);
-  
+  read_sswitch_reg(myid,0x5,data);
+  DBG(printstr,"Control board ID: 0x");
+  DBG(printhexln,data);
+  xlinkboot_disable_links(myid);
+  swallow_xlinkboot_reset(rst);
   /* Special cases to bring-up the corner, before we launch into generic bring-up of switches */
   if (position == SWXLB_POS_BOTTOM || position == SWXLB_POS_RIGHT)
   {
@@ -262,7 +268,7 @@ int swallow_xlinkboot(unsigned boards_w, unsigned boards_h, unsigned reset, unsi
     {
       rid &= ~(1 << SWXLB_LPOS);
     }
-    result = xlinkboot_initial_configure(myid, rid, XLB_L_LINKB, XLB_L_LINKB,
+    result = xlinkboot_initial_configure(myid, rid, XLB_L_LINKD, XLB_L_LINKB,
       SWXLB_PERIPH_LINK_CONFIG, SWXLB_COMPUTE_LINK_CONFIG, PLL, PLL_len, SWXLB_PLL_DEFAULT);
     /* TODO: What links will I need? */
     if (result < 0)
