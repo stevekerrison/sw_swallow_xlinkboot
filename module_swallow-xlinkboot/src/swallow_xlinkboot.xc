@@ -19,44 +19,6 @@
 #include "swallow_xlinkboot.h"
 #include "swallow_comms.h"
 
-void prog(void)
-{
-    /* Light 'em up */
-    /*"not r0,r0\n"
-    "bu -0x2\n"
-    "ldc r0,0x802\n"
-    "shl r0,r0,8\n"
-    "setc res[r0],0\n"
-    "ldc r0,0x1001\n"
-    "shl r0,r0,8\n"
-    "setc res[r0],0\n"
-    "ldc r0,0xf\n"
-    "ldc r1,0x405\n"
-	  "shl r1,r1,8\n"
-	  "setc res[r1],8\n"
-	  "out res[r1],r0\n"
-	  "bu -0x1\n"*/
-  /*asm(".align 4\n"
-    "bootprog_code:\n"
-    "ldc r0,6\n"
-    "setc res[r0],0x8\n"
-    "setc res[r0],0xf\n"
-    "ldc r0,0xf\n"
-    "ldc r1,0x405\n"
-	  "shl r1,r1,8\n"
-	  "setc res[r1],8\n"
-	  "out res[r1],r0\n"
-	  "bu -0x1\n"*/
-	  /* Jump back to the bootloader. */
-  	/*"ldc r0,0\n"
-  	"not r0,r0\n"
-  	"ldc r1,0x3fff\n"
-  	"sub r0,r0,r1\n"
-  	"bau r0\n"
-  	"nop\nnop\nnop\n"
-  	"bootprog_code_end:":::"r0,r1");*/
-}
-
 static unsigned swallow_xlinkboot_genid(unsigned row, unsigned col)
 {
   return (row << SWXLB_VPOS) | (col << SWXLB_LPOS);
@@ -65,7 +27,7 @@ static unsigned swallow_xlinkboot_genid(unsigned row, unsigned col)
 static void bootprog(unsigned rows, unsigned cols)
 {
   unsigned ce = getChanend(0x2), r, c, id, size, crc = 0xd15ab1e, loc, i, word;
-  /*asm("ldap r11,bootprog_code\n"
+  asm("ldap r11,bootprog_code\n"
     "mov %0,r11\n"
     "ldap r11,bootprog_code_end\n"
     "sub %0,r11,%0\n"
@@ -78,7 +40,7 @@ static void bootprog(unsigned rows, unsigned cols)
         "mov %0,r11":"=r"(loc)::"r11");
       id = swallow_xlinkboot_genid(r,c);
       //printhex(id);
-      setDestination(ce,(id << 16) | 0x2);
+      asm("setd res[%0],%1"::"r"(ce),"r"((id << 16) | 0x2));
       asm("out res[%0],%0\n"
         "out res[%0],%1"::"r"(ce),"r"(size));
       for (i = loc; i < loc + (size*4); i += 4)
@@ -92,7 +54,7 @@ static void bootprog(unsigned rows, unsigned cols)
       asm("outct res[%0],1\n"
         "chkct res[%0],1\n"::"r"(ce));
     }
-  }*/
+  }
   freeChanend(ce);
 }
 
@@ -127,11 +89,18 @@ static int swallow_xlinkboot_route_configure(unsigned r, unsigned c, unsigned ro
 {
   unsigned id = swallow_xlinkboot_genid(r,c);
   unsigned dir, layer = (id >> SWXLB_LPOS) & MASK_FROM_BITS(SWXLB_LBITS);
+  int result;
   int i;
+  DBG(printstr,"Doing route config for 0x");
+  DBG(printhexln,id);
   /* The core above us rebooted earlier, so doesn't think we have credit. Say HELLO again */
-  if (r > 0)
+  if (r > 0 && c != 1)
   {
-    xlinkboot_half_link_up(id, XLB_L_LINKA, SWXLB_COMPUTE_LINK_CONFIG | XLB_HELLO);
+    result = xlinkboot_half_link_up(id, XLB_L_LINKA, SWXLB_COMPUTE_LINK_CONFIG);
+    if (result < 0)
+    {
+      return result;
+    }
   }
   for (i = SWXLB_LINK_ENABLE_BEGIN; i < SWXLB_LINK_ENABLE_END; i += 1)
   {
@@ -194,6 +163,7 @@ static int swallow_xlinkboot_route_configure(unsigned r, unsigned c, unsigned ro
     write_sswitch_reg_no_ack_clean(id,0xc,dirbits[0]);
     write_sswitch_reg_no_ack_clean(id,0xd,dirbits[1]);
   }
+  DBG(printstrln,"Done!");
   return 0;
 }
 
@@ -263,10 +233,15 @@ int swallow_xlinkboot(unsigned boards_w, unsigned boards_h, unsigned reset, unsi
   /* Special cases to bring-up the corner, before we launch into generic bring-up of switches */
   if (position == SWXLB_POS_BOTTOM || position == SWXLB_POS_RIGHT)
   {
-    unsigned rid = swallow_xlinkboot_genid(rows-1,cols-1);
+    unsigned rid = swallow_xlinkboot_genid(rows-1,cols-1), rid2;
     if (!position)
     {
       rid &= ~(1 << SWXLB_LPOS);
+      rid2 = rid | (1 << SWXLB_LPOS);
+    }
+    else
+    {
+      rid2 = rid ^ (1 << SWXLB_LPOS);
     }
     result = xlinkboot_initial_configure(myid, rid, XLB_L_LINKD, XLB_L_LINKB,
       SWXLB_PERIPH_LINK_CONFIG, SWXLB_COMPUTE_LINK_CONFIG, PLL, PLL_len, SWXLB_PLL_DEFAULT);
@@ -276,14 +251,14 @@ int swallow_xlinkboot(unsigned boards_w, unsigned boards_h, unsigned reset, unsi
       return result;
     }
     /* Now bring up the other core */
-    result = xlinkboot_initial_configure(rid,rid ^ ((position) << SWXLB_LPOS), XLB_L_LINKF, XLB_L_LINKG,
+    result = xlinkboot_initial_configure(rid,rid2, XLB_L_LINKF, XLB_L_LINKG,
       SWXLB_COMPUTE_LINK_CONFIG, SWXLB_COMPUTE_LINK_CONFIG, PLL, PLL_len, SWXLB_PLL_DEFAULT);
     if (result < 0)
     {
       return result;
     }
     
-    swallow_xlinkboot_internal_links(rid,rid ^ ((position) << SWXLB_LPOS));
+    swallow_xlinkboot_internal_links(rid,rid2);
   }
   else
   {
@@ -341,21 +316,32 @@ int swallow_xlinkboot(unsigned boards_w, unsigned boards_h, unsigned reset, unsi
         /* Hello its up/down links as necessary */
         if (r < rows - 1)
         {
-          xlinkboot_half_link_up(dstid, XLB_L_LINKB, SWXLB_COMPUTE_LINK_CONFIG);
+          result = xlinkboot_half_link_up(dstid, XLB_L_LINKB, SWXLB_COMPUTE_LINK_CONFIG);
+          if (result < 0)
+          {
+            return result;
+          }
         }
         if (r > 0)
         {
-          xlinkboot_half_link_up(dstid, XLB_L_LINKA, SWXLB_COMPUTE_LINK_CONFIG);
+          result = xlinkboot_half_link_up(dstid, XLB_L_LINKA, SWXLB_COMPUTE_LINK_CONFIG);
+          if (result < 0)
+          {
+            return result;
+          }
         }
       }
     }
     /* Update c here to allow initial skip */
     c = cols - 1;
   }
+  DBG(printstrln,"Links up, now to do final routing configuration");
   for (r = 0; r < rows - 1; r += 1)
   {
     /* Neighbour's ID */
     unsigned nid = swallow_xlinkboot_genid(r,cols-2);
+    DBG(printstr,"R: ");
+    DBG(printintln,r);
     /* When we start a row, make sure the vertical entry point to the row then switches packets horizontally */
     write_sswitch_reg_no_ack_clean(nid,0x20 + XLB_L_LINKA, XLB_ROUTE_AVOID);
     write_sswitch_reg_no_ack_clean(nid,0x20 + XLB_L_LINKF, 0x00000000);
@@ -377,7 +363,11 @@ int swallow_xlinkboot(unsigned boards_w, unsigned boards_h, unsigned reset, unsi
         write_sswitch_reg_no_ack_clean(nid,0x20 + XLB_L_LINKA, XLB_ROUTE_AVOID);
         write_sswitch_reg_no_ack_clean(nid,0x20 + XLB_L_LINKF, 0x00000000);
       }
-      swallow_xlinkboot_route_configure(r,c,rows,cols,SWXLB_COMPUTE_LINK_CONFIG);
+      result = swallow_xlinkboot_route_configure(r,c,rows,cols,SWXLB_COMPUTE_LINK_CONFIG);
+      if (result < 0)
+      {
+        return result;
+      }
       /* Ugly hack to swap the order we program the last two nodes in a row */
       if (c == cols - 1)
       {
@@ -389,11 +379,15 @@ int swallow_xlinkboot(unsigned boards_w, unsigned boards_h, unsigned reset, unsi
       }
     }
   }
+  DBG(printstrln,"Routing bottom row now...");
   /* Now do the final row as a special case */
+  if (position == SWXLB_POS_RIGHT) //TODO: Generalise for both cases
   {
     /* Neighbour's ID */
     unsigned nid = swallow_xlinkboot_genid(rows-1,cols-1);
     /* When we start a row, make sure the vertical entry point to the row then switches packets horizontally */
+    DBG(printstr,"Temporary reroute on core 0x");
+    DBG(printhexln,nid);
     write_sswitch_reg_no_ack_clean(nid,0x20 + XLB_L_LINKF, XLB_ROUTE_AVOID);
     write_sswitch_reg_no_ack_clean(nid,0x20 + XLB_L_LINKA, 0x00000000);
     for (c = 0; c < cols - 2; c += 1)
@@ -402,18 +396,85 @@ int swallow_xlinkboot(unsigned boards_w, unsigned boards_h, unsigned reset, unsi
       if ((c & 1) == 0 && c + 2 < cols)
       {
         nid = swallow_xlinkboot_genid(rows-1,c+1);
+        DBG(printstr,"ID: ");
+        DBG(printhexln,nid);
         write_sswitch_reg_no_ack_clean(nid,0x20 + XLB_L_LINKA, XLB_ROUTE_AVOID);
         write_sswitch_reg_no_ack_clean(nid,0x20 + XLB_L_LINKF, 0x00000000);
-        xlinkboot_half_link_up(swallow_xlinkboot_genid(rows-1,c), XLB_L_LINKA, SWXLB_COMPUTE_LINK_CONFIG | XLB_HELLO);
+        //result = xlinkboot_half_link_up(swallow_xlinkboot_genid(rows-1,c), XLB_L_LINKA, SWXLB_COMPUTE_LINK_CONFIG);
+        if (result < 0)
+        {
+          return result;
+        }
       }
-      swallow_xlinkboot_route_configure(rows-1,c,rows,cols,SWXLB_COMPUTE_LINK_CONFIG);
+      result = swallow_xlinkboot_route_configure(rows-1,c,rows,cols,SWXLB_COMPUTE_LINK_CONFIG);
+      if (result < 0)
+      {
+        return result;
+      }
     }
     nid = swallow_xlinkboot_genid(rows-1,cols-1);
     write_sswitch_reg_no_ack_clean(nid,0x20 + XLB_L_LINKA, XLB_ROUTE_AVOID);
     write_sswitch_reg_no_ack_clean(nid,0x20 + XLB_L_LINKF, 0x00000000);
-    swallow_xlinkboot_route_configure(rows-1,cols-2,rows,cols,SWXLB_COMPUTE_LINK_CONFIG);
-    swallow_xlinkboot_route_configure(rows-1,cols-1,rows,cols,SWXLB_COMPUTE_LINK_CONFIG);
+    result = swallow_xlinkboot_route_configure(rows-1,cols-2,rows,cols,SWXLB_COMPUTE_LINK_CONFIG);
+    if (result < 0)
+    {
+      return result;
+    }
+    result = swallow_xlinkboot_route_configure(rows-1,cols-1,rows,cols,SWXLB_COMPUTE_LINK_CONFIG);
+    if (result < 0)
+    {
+      return result;
+    }
   }
+  else
+  {
+    /* Entry point into grid */
+    unsigned nid = swallow_xlinkboot_genid(rows-1,cols-2);
+    /* When we start a row, make sure the vertical entry point to the row then switches packets horizontally */
+    DBG(printstr,"Temporary reroute on core 0x");
+    DBG(printhexln,nid);
+    write_sswitch_reg_no_ack_clean(nid,0x20 + XLB_L_LINKF, 0x00000000);
+    write_sswitch_reg_no_ack_clean(nid,0x20 + XLB_L_LINKA, XLB_ROUTE_AVOID);
+    nid = swallow_xlinkboot_genid(rows-1,cols-1);
+    write_sswitch_reg_no_ack_clean(nid,0x20 + XLB_L_LINKA, 0x00000000);
+    write_sswitch_reg_no_ack_clean(nid,0x20 + XLB_L_LINKF, XLB_ROUTE_AVOID);
+    for (c = 0; c < cols - 2; c += 1)
+    {
+      /* Tweaks routes to communicate with cores on the "0" layer as we move horizontally along the "1" plane */
+      if ((c & 1) == 0 && c + 2 < cols)
+      {
+        nid = swallow_xlinkboot_genid(rows-1,c+1);
+        DBG(printstr,"ID: ");
+        DBG(printhexln,nid);
+        write_sswitch_reg_no_ack_clean(nid,0x20 + XLB_L_LINKA, XLB_ROUTE_AVOID);
+        write_sswitch_reg_no_ack_clean(nid,0x20 + XLB_L_LINKF, 0x00000000);
+        //result = xlinkboot_half_link_up(swallow_xlinkboot_genid(rows-1,c), XLB_L_LINKA, SWXLB_COMPUTE_LINK_CONFIG);
+        if (result < 0)
+        {
+          return result;
+        }
+      }
+      result = swallow_xlinkboot_route_configure(rows-1,c,rows,cols,SWXLB_COMPUTE_LINK_CONFIG);
+      if (result < 0)
+      {
+        return result;
+      }
+    }
+    nid = swallow_xlinkboot_genid(rows-1,cols-2);
+    write_sswitch_reg_no_ack_clean(nid,0x20 + XLB_L_LINKA, XLB_ROUTE_AVOID);
+    write_sswitch_reg_no_ack_clean(nid,0x20 + XLB_L_LINKF, 0x00000000);
+    result = swallow_xlinkboot_route_configure(rows-1,cols-1,rows,cols,SWXLB_COMPUTE_LINK_CONFIG);
+    if (result < 0)
+    {
+      return result;
+    }
+    result = swallow_xlinkboot_route_configure(rows-1,cols-2,rows,cols,SWXLB_COMPUTE_LINK_CONFIG);
+    if (result < 0)
+    {
+      return result;
+    }
+  }
+  DBG(printstrln,"Configured all links and routes except my own. Doing that now...");
   /* Now my ID is wrong! So I must give myself a new one - our compute grid address with the P-bit set */
   {
     unsigned nid = swallow_xlinkboot_genid(rows-1,cols-2+position) | 1;

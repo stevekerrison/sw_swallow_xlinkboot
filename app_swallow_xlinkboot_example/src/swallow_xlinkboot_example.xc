@@ -23,9 +23,16 @@ out port rst = XS1_PORT_1D; //I on old, D on new
 int main(void)
 {
   int result;
+  timer t;
+  unsigned tv1, tv2;
   struct xlinkboot_pll_t PLLs[1] = {{-1,0,-1,0x00002700,1,5}};
-  result = swallow_xlinkboot(1,1,1,SWXLB_POS_BOTTOM,PLLs,1,rst);
+  t :> tv1;
+  result = swallow_xlinkboot(2,3,1,SWXLB_POS_BOTTOM,PLLs,1,rst);
+  t :> tv2;
   printstr("Result: ");
   printintln(result);
+  printstr("Configuration took ");
+  printint((tv2 - tv1) / 100);
+  printstrln("uS");
   return result;
 }

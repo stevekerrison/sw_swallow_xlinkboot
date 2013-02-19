@@ -28,6 +28,7 @@ unsigned xlinkboot_disable_links(unsigned id)
   {
     write_sswitch_reg_no_ack_clean(id,0x80 + i, 0);
   }
+  return 0;
 }
 
 /** 
@@ -93,20 +94,22 @@ int xlinkboot_half_link_up(unsigned id, unsigned link, unsigned config)
 {
   unsigned data = 0, tv;
   timer t;
+  DBG(printstr,"Half-up link 0x");
+  DBG(printhex,link);
+  DBG(printstr," on core 0x");
+  DBG(printhex,id);
   /* Put the links on a different network to avoid routing garbage */
   write_sswitch_reg_no_ack_clean(id,0x20 + link,XLB_ROUTE_AVOID);
-  while((data & (XLB_ERR | XLB_CAN_TX)) != XLB_CAN_TX)
+  write_sswitch_reg_no_ack_clean(id,0x80 + link, config | XLB_HELLO);
+  t :> tv;
+  tv += XLB_UP_DELAY;
+  t when timerafter(tv) :> void;
+  read_sswitch_reg(id,0x80 + link,data);
+  if((data & (XLB_ERR | XLB_CAN_TX)) != XLB_CAN_TX)
   {
-    if (data & XLB_ERR)
-    {
-      return -XLB_LINK_FAIL;
-    }
-    write_sswitch_reg_no_ack_clean(id,0x80 + link, config | XLB_HELLO);
-    t :> tv;
-    tv += XLB_UP_DELAY;
-    t when timerafter(tv) :> void;
-    read_sswitch_reg(id,0x80 + link,data);
+    return -XLB_LINK_FAIL;
   }
+  DBG(printstrln," ...done!");
   return 0;
 }
 
@@ -118,32 +121,28 @@ int xlinkboot_secondary_link_up(unsigned lid, unsigned local_link,
 {
   unsigned data, tv;
   timer t;
+  DBG(printstrln,"Bringing up additional link between two switches...");
   /* Put the links on a different network to avoid routing garbage */
   write_sswitch_reg_no_ack_clean(lid,0x20 + local_link,XLB_ROUTE_AVOID);
   write_sswitch_reg_no_ack_clean(rid,0x20 + remote_link,XLB_ROUTE_AVOID);
+  write_sswitch_reg_no_ack_clean(lid,0x80 + local_link, local_config | XLB_HELLO);
+  t :> tv;
+  tv += XLB_UP_DELAY;
+  t when timerafter(tv) :> void;
   read_sswitch_reg(lid,0x80 + local_link,data);
-  //printstrln("Issuing HELLO");
-  while((data & (XLB_ERR | XLB_CAN_TX)) != XLB_CAN_TX)
+  if((data & (XLB_ERR | XLB_CAN_TX)) != XLB_CAN_TX)
   {
-    if (data & XLB_ERR)
-    {
-      return -XLB_LINK_FAIL;
-    }
-    write_sswitch_reg_no_ack_clean(lid,0x80 + local_link, local_config | XLB_HELLO);
-    t :> tv;
-    tv += XLB_UP_DELAY;
-    t when timerafter(tv) :> void;
-    read_sswitch_reg(lid,0x80 + local_link,data);
+    return -XLB_LINK_FAIL;
   }
   /* Ask the remote switch to change speed and issue a HELLO back to us */
   write_sswitch_reg_no_ack_clean(rid,0x80 + remote_link, remote_config | XLB_HELLO);
-  while((data & (XLB_ERR | XLB_CAN_TX | XLB_CAN_RX)) != (XLB_CAN_TX | XLB_CAN_RX))
+  t :> tv;
+  tv += XLB_UP_DELAY;
+  t when timerafter(tv) :> void;
+  read_sswitch_reg(lid,0x80 + local_link,data);
+  if ((data & (XLB_ERR | XLB_CAN_TX | XLB_CAN_RX)) != (XLB_CAN_TX | XLB_CAN_RX))
   {
-    read_sswitch_reg(lid,0x80 + local_link,data);
-    if (data & XLB_ERR)
-    {
-      return -XLB_LINK_FAIL;
-    }
+    return -XLB_LINK_FAIL;
   }
   return 0;
 }
@@ -204,7 +203,7 @@ int xlinkboot_initial_configure(unsigned local_id, unsigned remote_id, unsigned 
     write_sswitch_reg_no_ack_clean(0,0x8,PLLs[result].ref_div);
   }
   #endif
-  DBG(printstrln,"Programming direction");
+  DBG(printstr,"Programming direction: ");
   DBG(printhexln,remote_link);
   /* Make the route back to me follow direction "1" */    
   write_sswitch_reg_no_ack_clean(0,0x20 + remote_link,XLB_ROUTE_RETURN << XLB_DIR_SHIFT);
@@ -212,12 +211,15 @@ int xlinkboot_initial_configure(unsigned local_id, unsigned remote_id, unsigned 
   DBG(printstrln,"Programming route tables");
   write_sswitch_reg_no_ack_clean(0,0xc,0x00000000);
   write_sswitch_reg_no_ack_clean(0,0xd,XLB_ROUTE_RETURN << (7*XLB_DIR_BITS));
-  DBG(printstrln,"Programming Node ID");
+  DBG(printstr,"Programming Node ID: ");
+  DBG(printhexln,remote_id);
   /* Set up my real node ID */
   write_sswitch_reg_no_ack_clean(0,0x05,remote_id);
   DBG(printstrln,"Remote routing tables set, reading some data back");
   read_sswitch_reg(remote_id,0x05,data);
   read_sswitch_reg(remote_id,0x06,data);
+  DBG(printstr,"Read successfully: ");
+  DBG(printhexln,data);
   return remote_id;
 }
 
