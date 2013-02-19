@@ -17,7 +17,7 @@
 #ifndef XLINKBOOT_H
 #define XLINKBOOT_H
 
-#define DEBUG
+//#define DEBUG
 #ifndef DBG
 #ifdef DEBUG
 #define DBG(fn,...) fn(__VA_ARGS__)

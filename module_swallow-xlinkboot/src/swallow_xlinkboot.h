@@ -68,6 +68,7 @@
 #define SWXLB_INVALID_PERIPHERAL_POS    0x30000
 
 void bootprog_code(void);
+void bootprog_code2(void);
 
 /* Launch a server thread, receives configuration and then applies it */
 void swallow_xlinkboot_server(chanend c_svr, out port rst);
