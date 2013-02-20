@@ -24,50 +24,54 @@ static unsigned swallow_xlinkboot_genid(unsigned row, unsigned col)
   return (row << SWXLB_VPOS) | (col << SWXLB_LPOS);
 }
 
+/**
+ * We use this to send the kissoflife program to a core at an appropriate moment to signify that
+ * it's ready to receive a full program.
+**/
+static void bootone(unsigned id)
+{
+  unsigned ce = getChanend(0x2), size, crc = 0xd15ab1e, loc, i, word;
+  asm("ldap r11,kissoflife\n"
+    "mov %0,r11\n"
+    "ldap r11,kissoflife_end\n"
+    "sub %0,r11,%0\n"
+    "shr %0,%0,2":"=r"(size):);
+  asm("ldap r11,kissoflife\n"
+    "mov %0,r11":"=r"(loc)::"r11");
+  asm("setd res[%0],%1"::"r"(ce),"r"((id << 16) | 0x2));
+  asm("out res[%0],%0\n"
+    "out res[%0],%1"::"r"(ce),"r"(size));
+  for (i = loc; i < loc + (size*4); i += 4)
+  {
+    asm("ldw %0,%1[0]\n"
+      "out res[%2],%0\n":"=r"(word):"r"(i),"r"(ce));
+  }
+  asm("out res[%0],%1\n"::"r"(ce),"r"(crc));
+  asm("outct res[%0],1\n"
+    "chkct res[%0],1\n"::"r"(ce));
+  freeChanend(ce);
+}
+
+/**
+ * This is not very useful except as a demo, to show that all the cores can be booted and flash LEDs
+ * You can't do very much with the grid after running this, however
+**/
 static void bootall(unsigned rows, unsigned cols)
 {
   unsigned ce = getChanend(0x2), r, c, id, size, crc = 0xd15ab1e, loc, i, word;
-  asm("ldap r11,bootprog_code\n"
+  asm("ldap r11,testprog\n"
     "mov %0,r11\n"
-    "ldap r11,bootprog_code_end\n"
+    "ldap r11,testprog_end\n"
     "sub %0,r11,%0\n"
     "shr %0,%0,2":"=r"(size):);
   for (r = 0; r < rows; r += 1)
   {
     for (c = 0; c < cols; c += 1)
     {
-      asm("ldap r11,bootprog_code\n"
+      asm("ldap r11,testprog\n"
         "mov %0,r11":"=r"(loc)::"r11");
       id = swallow_xlinkboot_genid(r,c);
       //printhex(id);
-      asm("setd res[%0],%1"::"r"(ce),"r"((id << 16) | 0x2));
-      asm("out res[%0],%0\n"
-        "out res[%0],%1"::"r"(ce),"r"(size));
-      for (i = loc; i < loc + (size*4); i += 4)
-      {
-        asm("ldw %0,%1[0]\n"
-          "out res[%2],%0\n":"=r"(word):"r"(i),"r"(ce));
-        //printchar('.');
-      }
-      //printcharln('\0');
-      asm("out res[%0],%1\n"::"r"(ce),"r"(crc));
-      asm("outct res[%0],1\n"
-        "chkct res[%0],1\n"::"r"(ce));
-    }
-  }
-  crc = 0xd15ab1e;
-  asm("ldap r11,bootprog2_code\n"
-    "mov %0,r11\n"
-    "ldap r11,bootprog2_code_end\n"
-    "sub %0,r11,%0\n"
-    "shr %0,%0,2":"=r"(size):);
-  for (r = 0; r < rows; r += 1)
-  {
-    for (c = 0; c < cols; c += 1)
-    {
-      asm("ldap r11,bootprog2_code\n"
-        "mov %0,r11":"=r"(loc)::"r11");
-      id = swallow_xlinkboot_genid(r,c);
       asm("setd res[%0],%1"::"r"(ce),"r"((id << 16) | 0x2));
       asm("out res[%0],%0\n"
         "out res[%0],%1"::"r"(ce),"r"(size));
@@ -278,6 +282,7 @@ int swallow_xlinkboot(unsigned boards_w, unsigned boards_h, unsigned reset, unsi
     {
       return result;
     }
+    bootone(rid);
     /* Now bring up the other core */
     result = xlinkboot_initial_configure(rid,rid2, XLB_L_LINKF, XLB_L_LINKG,
       SWXLB_COMPUTE_LINK_CONFIG, SWXLB_COMPUTE_LINK_CONFIG, PLL, PLL_len, SWXLB_PLL_DEFAULT);
@@ -285,7 +290,7 @@ int swallow_xlinkboot(unsigned boards_w, unsigned boards_h, unsigned reset, unsi
     {
       return result;
     }
-    
+    bootone(rid2);
     swallow_xlinkboot_internal_links(rid,rid2);
   }
   else
@@ -314,6 +319,11 @@ int swallow_xlinkboot(unsigned boards_w, unsigned boards_h, unsigned reset, unsi
         //printhexln(dstid);
         result = xlinkboot_initial_configure(srcid, dstid, XLB_L_LINKA, XLB_L_LINKB,
           SWXLB_COMPUTE_LINK_CONFIG, SWXLB_COMPUTE_LINK_CONFIG, PLL, PLL_len, SWXLB_PLL_DEFAULT);
+        if (result < 0)
+        {
+          return result;
+        }
+        bootone(dstid);
       }
       /*Right-most core (layer 1) needs booting over internal-link */
       else if (c == (cols-2))
@@ -323,6 +333,11 @@ int swallow_xlinkboot(unsigned boards_w, unsigned boards_h, unsigned reset, unsi
         //printhexln(dstid);
         result = xlinkboot_initial_configure(srcid, dstid, XLB_L_LINKF, XLB_L_LINKG,
           SWXLB_COMPUTE_LINK_CONFIG, SWXLB_COMPUTE_LINK_CONFIG, PLL, PLL_len, SWXLB_PLL_DEFAULT);
+        if (result < 0)
+        {
+          return result;
+        }
+        bootone(dstid);
         swallow_xlinkboot_internal_links(srcid,dstid);
       }
       /* All other layer 1 cores are booted from their neighbour over link B */
@@ -332,6 +347,11 @@ int swallow_xlinkboot(unsigned boards_w, unsigned boards_h, unsigned reset, unsi
         //printhexln(dstid);
         result = xlinkboot_initial_configure(srcid, dstid, XLB_L_LINKA, XLB_L_LINKB,
           SWXLB_COMPUTE_LINK_CONFIG, SWXLB_COMPUTE_LINK_CONFIG, PLL, PLL_len, SWXLB_PLL_DEFAULT);
+        if (result < 0)
+        {
+          return result;
+        }
+        bootone(dstid);
       }
       /* All other layer 0 cores are booted over internal-link */
       else
@@ -340,6 +360,11 @@ int swallow_xlinkboot(unsigned boards_w, unsigned boards_h, unsigned reset, unsi
         //printhexln(dstid);
         result = xlinkboot_initial_configure(srcid, dstid, XLB_L_LINKF, XLB_L_LINKG,
           SWXLB_COMPUTE_LINK_CONFIG, SWXLB_COMPUTE_LINK_CONFIG, PLL, PLL_len, SWXLB_PLL_DEFAULT);
+        if (result < 0)
+        {
+          return result;
+        }
+        bootone(dstid);
         swallow_xlinkboot_internal_links(srcid,dstid);
         /* Hello its up/down links as necessary */
         if (r < rows - 1)

@@ -47,8 +47,8 @@
 #define SWXLB_POS_BOTTOM          0
 #define SWXLB_POS_RIGHT           1
 
-#define SWXLB_PERIPH_LINK_CONFIG  0x80002001
-#define SWXLB_COMPUTE_LINK_CONFIG 0x80002001
+#define SWXLB_PERIPH_LINK_CONFIG  0x80004002
+#define SWXLB_COMPUTE_LINK_CONFIG 0x80004002
 
 
 #define SWXLB_DIR_TOWARDS         0
@@ -66,9 +66,6 @@
 #define SWXLB_GENERIC_FAIL              0x10000
 #define SWXLB_INVALID_BOARD_DIMENSIONS  0x20000
 #define SWXLB_INVALID_PERIPHERAL_POS    0x30000
-
-void bootprog_code(void);
-void bootprog_code2(void);
 
 /* Launch a server thread, receives configuration and then applies it */
 void swallow_xlinkboot_server(chanend c_svr, out port rst);
