@@ -24,7 +24,7 @@ static unsigned swallow_xlinkboot_genid(unsigned row, unsigned col)
   return (row << SWXLB_VPOS) | (col << SWXLB_LPOS);
 }
 
-static void bootprog(unsigned rows, unsigned cols)
+static void bootall(unsigned rows, unsigned cols)
 {
   unsigned ce = getChanend(0x2), r, c, id, size, crc = 0xd15ab1e, loc, i, word;
   asm("ldap r11,bootprog_code\n"
@@ -55,7 +55,6 @@ static void bootprog(unsigned rows, unsigned cols)
         "chkct res[%0],1\n"::"r"(ce));
     }
   }
-  printstrln("Doing second boot image");
   crc = 0xd15ab1e;
   asm("ldap r11,bootprog2_code\n"
     "mov %0,r11\n"
@@ -69,7 +68,6 @@ static void bootprog(unsigned rows, unsigned cols)
       asm("ldap r11,bootprog2_code\n"
         "mov %0,r11":"=r"(loc)::"r11");
       id = swallow_xlinkboot_genid(r,c);
-      printhex(id);
       asm("setd res[%0],%1"::"r"(ce),"r"((id << 16) | 0x2));
       asm("out res[%0],%0\n"
         "out res[%0],%1"::"r"(ce),"r"(size));
@@ -516,7 +514,7 @@ int swallow_xlinkboot(unsigned boards_w, unsigned boards_h, unsigned reset, unsi
    * if things are really boned */
   read_sswitch_reg(0x0,0x5,data);
   /* Now run a tiny program to test the cores and let there be light! */
-  bootprog(rows,cols);
+  bootall(rows,cols);
   /* TODO: Test & bring up any connected peripheral links */
   return 0;
 }
