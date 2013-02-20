@@ -52,6 +52,7 @@ static void bootone(unsigned id)
   freeChanend(ce);
 }
 
+#ifdef DEMO_MODE
 /**
  * This is not very useful except as a demo, to show that all the cores can be booted and flash LEDs
  * You can't do very much with the grid after running this, however
@@ -89,6 +90,7 @@ static void bootall(unsigned rows, unsigned cols)
   }
   freeChanend(ce);
 }
+#endif
 
 /* Launch a server thread, receives configuration and then applies it */
 void swallow_xlinkboot_server(chanend c_svr, out port rst)
@@ -538,8 +540,10 @@ int swallow_xlinkboot(unsigned boards_w, unsigned boards_h, unsigned reset, unsi
   /* Just checking we can communicate across the network - not exactly a thorough test but it should catch
    * if things are really boned */
   read_sswitch_reg(0x0,0x5,data);
+#ifdef DEMO_MODE
   /* Now run a tiny program to test the cores and let there be light! */
   bootall(rows,cols);
+#endif
   /* TODO: Test & bring up any connected peripheral links */
   return 0;
 }
