@@ -67,6 +67,17 @@
 #define SWXLB_INVALID_BOARD_DIMENSIONS  0x20000
 #define SWXLB_INVALID_PERIPHERAL_POS    0x30000
 
+struct swallow_xlinkboot_cfg {
+  unsigned boards_w;
+  unsigned boards_h;
+  unsigned do_reset;
+  unsigned position;
+  struct xlinkboot_pll_t PLL[XLB_PLL_LEN_MAX];
+  unsigned PLL_len;
+  out port reset_port;
+  
+};
+
 /* Launch a server thread, receives configuration and then applies it */
 void swallow_xlinkboot_server(chanend c_svr, out port rst);
 
