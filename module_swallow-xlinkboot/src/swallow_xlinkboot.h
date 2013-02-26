@@ -17,26 +17,8 @@
 #ifndef SWALLOW_XLINKBOOT_H
 #define SWALLOW_XLINKBOOT_H
 
+#include "swallow_comms.h"
 #include "xlinkboot.h"
-
-/* Configuration bits */
-
-#define COUNT_FROM_BITS(x)        (1 << x)
-#define MASK_FROM_BITS(x)         (COUNT_FROM_BITS(x) - 1)
-#define SWXLB_PBITS               1
-#define SWXLB_PPOS                0
-#define SWXLB_LBITS               1
-#define SWXLB_LPOS                (SWXLB_PPOS + SWXLB_PBITS)
-#define SWXLB_HBITS               6
-#define SWXLB_HPOS                (SWXLB_LPOS + SWXLB_LBITS)
-#define SWXLB_VBITS               7
-#define SWXLB_VPOS                (SWXLB_HPOS + SWXLB_HBITS)
-#define SWXLB_XSCOPE_BITS         1
-#define SWXLB_XSCOPE_POS          (SWXLB_VPOS + SWXLB_VBITS)
-#define SWXLB_CHIPS_W             2
-#define SWXLB_CHIPS_H             4
-#define SWXLB_CORES_CHIP          2
-#define SWXLB_MAX_CORES           COUNT_FROM_BITS(SWXLB_LBITS + SWXLB_HBITS + SWXLB_VBITS)
 
 /* Parameters */
 
