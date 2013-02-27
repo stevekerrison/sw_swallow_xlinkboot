@@ -47,18 +47,22 @@ int xlinkboot_link_up(unsigned id, unsigned local_link,
   write_sswitch_reg_no_ack_clean(id,0x80 + local_link,local_config);
   /* Now put us on the outbound route so we can talk to node 0 */
   write_sswitch_reg_no_ack_clean(id,0x20 + local_link,0x00000000);
+#ifndef LAZYLINK
   read_sswitch_reg(id,0x80 + local_link,data);
   DBG(printhexln,data);
+#endif
   DBG(printstrln,"Asking for credit...");
   write_sswitch_reg_no_ack_clean(id,0x80 + local_link,local_config | XLB_HELLO);
   t :> tv;
   tv += XLB_UP_DELAY;
   t when timerafter(tv) :> void;
+#ifndef LAZYLINK
   read_sswitch_reg(id,0x80 + local_link,data);
   if((data & (XLB_ERR | XLB_CAN_TX)) != XLB_CAN_TX)
   {
     return -XLB_LINK_FAIL;
   }
+#endif
   DBG(printstrln,"GOT CREDIT, CAN TX");
   /* Ask the remote switch to change speed and issue a HELLO back to us */
   write_sswitch_reg_no_ack_clean(0,0x80 + remote_link, remote_config);
@@ -69,11 +73,13 @@ int xlinkboot_link_up(unsigned id, unsigned local_link,
   t :> tv;
   tv += XLB_UP_DELAY*10;
   t when timerafter(tv) :> void;
+#ifndef LAZYLINK
   read_sswitch_reg(id,0x80 + local_link,data);
   if((data & (XLB_ERR | XLB_CAN_TX | XLB_CAN_RX)) != (XLB_CAN_TX | XLB_CAN_RX))
   {
     return -XLB_LINK_FAIL;
   }
+#endif
   /*while((data & (XLB_ERR | XLB_CAN_TX | XLB_CAN_RX)) != (XLB_CAN_TX | XLB_CAN_RX))
   {
     if (data & XLB_ERR)
@@ -104,11 +110,13 @@ int xlinkboot_half_link_up(unsigned id, unsigned link, unsigned config)
   t :> tv;
   tv += XLB_UP_DELAY;
   t when timerafter(tv) :> void;
+#ifndef LAZYLINK
   read_sswitch_reg(id,0x80 + link,data);
   if((data & (XLB_ERR | XLB_CAN_TX)) != XLB_CAN_TX)
   {
     return -XLB_LINK_FAIL;
   }
+#endif
   DBG(printstrln," ...done!");
   return 0;
 }
@@ -129,21 +137,25 @@ int xlinkboot_secondary_link_up(unsigned lid, unsigned local_link,
   t :> tv;
   tv += XLB_UP_DELAY;
   t when timerafter(tv) :> void;
+#ifndef LAZYLINK
   read_sswitch_reg(lid,0x80 + local_link,data);
   if((data & (XLB_ERR | XLB_CAN_TX)) != XLB_CAN_TX)
   {
     return -XLB_LINK_FAIL;
   }
+#endif
   /* Ask the remote switch to change speed and issue a HELLO back to us */
   write_sswitch_reg_no_ack_clean(rid,0x80 + remote_link, remote_config | XLB_HELLO);
   t :> tv;
   tv += XLB_UP_DELAY;
   t when timerafter(tv) :> void;
+#ifndef LAZYLINK
   read_sswitch_reg(lid,0x80 + local_link,data);
   if ((data & (XLB_ERR | XLB_CAN_TX | XLB_CAN_RX)) != (XLB_CAN_TX | XLB_CAN_RX))
   {
     return -XLB_LINK_FAIL;
   }
+#endif
   return 0;
 }
 
@@ -169,11 +181,15 @@ int xlinkboot_initial_configure(unsigned local_id, unsigned remote_id, unsigned 
   /* Make sure no links are considered outgoing (dir 0) at the start */
   for (i = 0; i < XLB_L_LINK_COUNT; i += 1)
   {
+#ifndef LAZYLINK
     read_sswitch_reg(local_id,0x20 + i,data);
     if ((data & XLB_DIR_MASK) >> XLB_DIR_SHIFT == 0)
     {
+#endif
       write_sswitch_reg_clean(local_id,0x20 + i,XLB_ROUTE_AVOID);
+#ifndef LAZYLINK
     }
+#endif
   }
   DBG(printstrln,"Initialising link");
   result = xlinkboot_link_up(local_id, local_link, local_config, remote_link, remote_config);
@@ -215,11 +231,13 @@ int xlinkboot_initial_configure(unsigned local_id, unsigned remote_id, unsigned 
   DBG(printhexln,remote_id);
   /* Set up my real node ID */
   write_sswitch_reg_no_ack_clean(0,0x05,remote_id);
+#ifndef LAZYLINK
   DBG(printstrln,"Remote routing tables set, reading some data back");
   read_sswitch_reg(remote_id,0x05,data);
   read_sswitch_reg(remote_id,0x06,data);
   DBG(printstr,"Read successfully: ");
   DBG(printhexln,data);
+#endif
   return remote_id;
 }
 

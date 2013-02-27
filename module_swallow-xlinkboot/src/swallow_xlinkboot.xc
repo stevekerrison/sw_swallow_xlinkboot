@@ -254,8 +254,10 @@ int swallow_xlinkboot(unsigned boards_w, unsigned boards_h, unsigned reset, unsi
   }
   /* Make my ID something we can pre-boot the compute nodes from */
   myid = get_local_tile_id();
+#ifndef LAZYLINK
   write_sswitch_reg_no_ack_clean(myid,0x5,XLB_ORIGIN_ID);
   myid = XLB_ORIGIN_ID;
+#endif
   /* We are origin for now, everything routes out of us... */
   write_sswitch_reg_no_ack_clean(myid,0xc,0x0);
   write_sswitch_reg_no_ack_clean(myid,0xd,0x0);
@@ -529,6 +531,7 @@ int swallow_xlinkboot(unsigned boards_w, unsigned boards_h, unsigned reset, unsi
       return result;
     }
   }
+#ifndef LAZYLINK
   DBG(printstrln,"Configured all links and routes except my own. Doing that now...");
   /* Now my ID is wrong! So I must give myself a new one - our compute grid address with the P-bit set */
   {
@@ -537,6 +540,7 @@ int swallow_xlinkboot(unsigned boards_w, unsigned boards_h, unsigned reset, unsi
     /* Yes, this is unnecessary, but consider it a soft-test that it worked :) */
     read_sswitch_reg(nid,0x5,myid);
   }
+#endif  
   /* Just checking we can communicate across the network - not exactly a thorough test but it should catch
    * if things are really boned */
   read_sswitch_reg(0x0,0x5,data);
