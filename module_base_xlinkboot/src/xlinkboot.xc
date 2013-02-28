@@ -182,7 +182,6 @@ int xlinkboot_initial_configure(unsigned local_id, unsigned remote_id, unsigned 
     return result;
   }
   DBG(printstrln,"Link up");
-  #if 1 //Disable PLL stuff for now...
   result = xlinkboot_pll_search(remote_id, PLLs, PLL_len);
   /* Reprogram the PLL, triggering a soft-reset of the core & switch */
   DBG(printstrln,"Programming PLL...");
@@ -202,7 +201,6 @@ int xlinkboot_initial_configure(unsigned local_id, unsigned remote_id, unsigned 
     write_sswitch_reg_no_ack_clean(0,0x7,PLLs[result].switch_div);
     write_sswitch_reg_no_ack_clean(0,0x8,PLLs[result].ref_div);
   }
-  #endif
   DBG(printstr,"Programming direction: ");
   DBG(printhexln,remote_link);
   /* Make the route back to me follow direction "1" */    
@@ -215,11 +213,13 @@ int xlinkboot_initial_configure(unsigned local_id, unsigned remote_id, unsigned 
   DBG(printhexln,remote_id);
   /* Set up my real node ID */
   write_sswitch_reg_no_ack_clean(0,0x05,remote_id);
+  /* Ditch the read-back because higher level boot agents may want to meddle with the routing table 
   DBG(printstrln,"Remote routing tables set, reading some data back");
   read_sswitch_reg(remote_id,0x05,data);
   read_sswitch_reg(remote_id,0x06,data);
   DBG(printstr,"Read successfully: ");
   DBG(printhexln,data);
+  */
   return remote_id;
 }
 
