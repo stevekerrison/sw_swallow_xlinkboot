@@ -22,19 +22,25 @@ kissoflife:
   ldc r0,6
   setc res[r0],0x8
   setc res[r0],0xf
-  ldc r0,0x1
+  ldc r0,0x0
+  sub r0,r0,1
   ldc r1,0x405
   ldc r5,0x108
   ldc r6,0x10a
+  ldc r7,0x106
   shl r5,r5,8
   shl r1,r1,8
   shl r6,r6,8
+  shl r7,r7,8
   setc res[r1],8
   setc res[r5],8
   setc res[r6],8
+  setc res[r7],8
   out res[r1],r0
   out res[r5],r0
   out res[r6],r0
+  out res[r7],r0
+  nop
   /* Jump back to the bootloader. */
 	getr r0,0x2
 	ldc r1,0xffff
@@ -70,18 +76,22 @@ testprog:
   ldc r1,0x405
   ldc r5,0x108
   ldc r6,0x10a
+  ldc r7,0x106
   shl r5,r5,8
   shl r1,r1,8
   shl r6,r6,8
+  shl r7,r7,8
   setc res[r1],8
   setc res[r5],8
   setc res[r6],8
+  setc res[r7],8
 testprog_loop:
   ldc r3,0
   add r0,r0,1
   out res[r1],r0
   out res[r5],r0
   out res[r6],r0
+  out res[r7],r0
 testprog_wait:
   add r3,r3,1
   eq r4,r2,r3

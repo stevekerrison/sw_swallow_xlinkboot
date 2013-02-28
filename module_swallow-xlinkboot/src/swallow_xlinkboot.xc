@@ -165,7 +165,14 @@ static int swallow_xlinkboot_route_configure(unsigned r, unsigned c, unsigned ro
     if (layer)
     {
       pdirbit = (col == 0) ? SWXLB_DIR_LEFT : SWXLB_DIR_RIGHT;
-      xscopedirbits = row == 1 ? SWXLB_DIR_LEFT : SWXLB_DIR_AWAY;
+      //xscopedirbits = row == 1 ? SWXLB_DIR_LEFT : SWXLB_DIR_AWAY;
+      if (row == rows - 1)
+        if (col == cols/2 - 1)
+          xscopedirbits = SWXLB_DIR_AWAY;
+        else
+          xscopedirbits = SWXLB_DIR_RIGHT;
+      else
+        xscopedirbits = SWXLB_DIR_AWAY;
       for (i = 0; i < SWXLB_VBITS; i++)
       {
         vdirbits <<= XLB_DIR_BITS;
@@ -180,7 +187,13 @@ static int swallow_xlinkboot_route_configure(unsigned r, unsigned c, unsigned ro
     else
     {
       pdirbit = (row == 0) ? SWXLB_DIR_UP : SWXLB_DIR_DOWN;
-      xscopedirbits = ((row == 0) ? SWXLB_DIR_DOWN : ((row == 1) ? SWXLB_DIR_AWAY : SWXLB_DIR_UP));
+      //xscopedirbits = ((row == 0) ? SWXLB_DIR_DOWN : ((row == 1) ? SWXLB_DIR_AWAY : SWXLB_DIR_UP));
+      if (row != rows - 1)
+        xscopedirbits = SWXLB_DIR_DOWN;
+      else if (col == cols/2 - 1)
+        xscopedirbits = SWXLB_DIR_DOWN;
+      else
+        xscopedirbits = SWXLB_DIR_TOWARDS;
       for (i = 0; i < SWXLB_HBITS; i++)
       {
         hdirbits <<= XLB_DIR_BITS;
@@ -515,6 +528,7 @@ int swallow_xlinkboot(unsigned boards_w, unsigned boards_h, unsigned reset, unsi
         return result;
       }
     }
+    
     nid = swallow_xlinkboot_genid(rows-1,cols-2);
     write_sswitch_reg_no_ack_clean(nid,0x20 + XLB_L_LINKA, XLB_ROUTE_AVOID);
     write_sswitch_reg_no_ack_clean(nid,0x20 + XLB_L_LINKF, 0x00000000);
@@ -529,6 +543,7 @@ int swallow_xlinkboot(unsigned boards_w, unsigned boards_h, unsigned reset, unsi
       return result;
     }
   }
+#if 0
   DBG(printstrln,"Configured all links and routes except my own. Doing that now...");
   /* Now my ID is wrong! So I must give myself a new one - our compute grid address with the P-bit set */
   {
@@ -537,6 +552,7 @@ int swallow_xlinkboot(unsigned boards_w, unsigned boards_h, unsigned reset, unsi
     /* Yes, this is unnecessary, but consider it a soft-test that it worked :) */
     read_sswitch_reg(nid,0x5,myid);
   }
+#endif
   /* Just checking we can communicate across the network - not exactly a thorough test but it should catch
    * if things are really boned */
   read_sswitch_reg(0x0,0x5,data);
