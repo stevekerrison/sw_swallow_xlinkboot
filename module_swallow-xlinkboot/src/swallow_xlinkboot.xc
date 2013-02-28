@@ -257,6 +257,9 @@ int swallow_xlinkboot(unsigned boards_w, unsigned boards_h, unsigned reset, unsi
 #ifndef LAZYLINK
   write_sswitch_reg_no_ack_clean(myid,0x5,XLB_ORIGIN_ID);
   myid = XLB_ORIGIN_ID;
+#else
+  write_sswitch_reg_no_ack_clean(myid,0x5,0x0b0d);
+  myid = 0x0b0d;
 #endif
   /* We are origin for now, everything routes out of us... */
   write_sswitch_reg_no_ack_clean(myid,0xc,0x0);
