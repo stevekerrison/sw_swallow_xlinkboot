@@ -286,7 +286,9 @@ int swallow_xlinkboot(unsigned boards_w, unsigned boards_h, unsigned reset, unsi
     {
       return result;
     }
+#ifndef LAZYLINK
     bootone(rid);
+#endif
     /* Now bring up the other core */
     result = xlinkboot_initial_configure(rid,rid2, XLB_L_LINKF, XLB_L_LINKG,
       SWXLB_COMPUTE_LINK_CONFIG, SWXLB_COMPUTE_LINK_CONFIG, PLL, PLL_len, SWXLB_PLL_DEFAULT);
@@ -294,7 +296,9 @@ int swallow_xlinkboot(unsigned boards_w, unsigned boards_h, unsigned reset, unsi
     {
       return result;
     }
+#ifndef LAZYLINK
     bootone(rid2);
+#endif
     swallow_xlinkboot_internal_links(rid,rid2);
   }
   else
@@ -327,7 +331,9 @@ int swallow_xlinkboot(unsigned boards_w, unsigned boards_h, unsigned reset, unsi
         {
           return result;
         }
+#ifndef LAZYLINK
         bootone(dstid);
+#endif
       }
       /*Right-most core (layer 1) needs booting over internal-link */
       else if (c == (cols-2))
@@ -341,7 +347,9 @@ int swallow_xlinkboot(unsigned boards_w, unsigned boards_h, unsigned reset, unsi
         {
           return result;
         }
+#ifndef LAZYLINK
         bootone(dstid);
+#endif
         swallow_xlinkboot_internal_links(srcid,dstid);
       }
       /* All other layer 1 cores are booted from their neighbour over link B */
@@ -355,7 +363,9 @@ int swallow_xlinkboot(unsigned boards_w, unsigned boards_h, unsigned reset, unsi
         {
           return result;
         }
+#ifndef LAZYLINK
         bootone(dstid);
+#endif
       }
       /* All other layer 0 cores are booted over internal-link */
       else
@@ -368,7 +378,9 @@ int swallow_xlinkboot(unsigned boards_w, unsigned boards_h, unsigned reset, unsi
         {
           return result;
         }
+#ifndef LAZYLINK
         bootone(dstid);
+#endif
         swallow_xlinkboot_internal_links(srcid,dstid);
         /* Hello its up/down links as necessary */
         if (r < rows - 1)
