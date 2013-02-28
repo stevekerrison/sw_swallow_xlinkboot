@@ -121,7 +121,8 @@ void swallow_xlinkboot_server(chanend c_svr, out port rst)
 }
 
 /* We now reprogram the switch to enable all desired links for the final network and do proper routing */
-static int swallow_xlinkboot_route_configure(unsigned r, unsigned c, unsigned rows, unsigned cols, unsigned link_config)
+static int swallow_xlinkboot_route_configure(unsigned r, unsigned c, unsigned rows, unsigned cols, unsigned link_config,
+  unsigned bootpos)
 {
   unsigned id = swallow_xlinkboot_genid(r,c);
   unsigned dir, layer = (id >> SWXLB_LPOS) & MASK_FROM_BITS(SWXLB_LBITS);
@@ -169,7 +170,7 @@ static int swallow_xlinkboot_route_configure(unsigned r, unsigned c, unsigned ro
       pdirbit = (col == 0) ? SWXLB_DIR_LEFT : SWXLB_DIR_RIGHT;
       //xscopedirbits = row == 1 ? SWXLB_DIR_LEFT : SWXLB_DIR_AWAY;
       if (row == rows - 1)
-        if (col == cols/2 - 1)
+        if (col == cols/2 - 1 && bootpos != SWXLB_POS_RIGHT)
           xscopedirbits = SWXLB_DIR_AWAY;
         else
           xscopedirbits = SWXLB_DIR_RIGHT;
@@ -189,10 +190,9 @@ static int swallow_xlinkboot_route_configure(unsigned r, unsigned c, unsigned ro
     else
     {
       pdirbit = (row == 0) ? SWXLB_DIR_UP : SWXLB_DIR_DOWN;
-      //xscopedirbits = ((row == 0) ? SWXLB_DIR_DOWN : ((row == 1) ? SWXLB_DIR_AWAY : SWXLB_DIR_UP));
       if (row != rows - 1)
         xscopedirbits = SWXLB_DIR_DOWN;
-      else if (col == cols/2 - 1)
+      else if (bootpos == SWXLB_POS_BOTTOM && col == cols/2 - 1)
         xscopedirbits = SWXLB_DIR_DOWN;
       else
         xscopedirbits = SWXLB_DIR_TOWARDS;
@@ -433,7 +433,7 @@ int swallow_xlinkboot(unsigned boards_w, unsigned boards_h, unsigned reset, unsi
         write_sswitch_reg_no_ack_clean(nid,0x20 + XLB_L_LINKA, XLB_ROUTE_AVOID);
         write_sswitch_reg_no_ack_clean(nid,0x20 + XLB_L_LINKF, 0x00000000);
       }
-      result = swallow_xlinkboot_route_configure(r,c,rows,cols,SWXLB_COMPUTE_LINK_CONFIG);
+      result = swallow_xlinkboot_route_configure(r,c,rows,cols,SWXLB_COMPUTE_LINK_CONFIG,position);
       if (result < 0)
       {
         return result;
@@ -476,7 +476,7 @@ int swallow_xlinkboot(unsigned boards_w, unsigned boards_h, unsigned reset, unsi
           return result;
         }
       }
-      result = swallow_xlinkboot_route_configure(rows-1,c,rows,cols,SWXLB_COMPUTE_LINK_CONFIG);
+      result = swallow_xlinkboot_route_configure(rows-1,c,rows,cols,SWXLB_COMPUTE_LINK_CONFIG,position);
       if (result < 0)
       {
         return result;
@@ -485,12 +485,12 @@ int swallow_xlinkboot(unsigned boards_w, unsigned boards_h, unsigned reset, unsi
     nid = swallow_xlinkboot_genid(rows-1,cols-1);
     write_sswitch_reg_no_ack_clean(nid,0x20 + XLB_L_LINKA, XLB_ROUTE_AVOID);
     write_sswitch_reg_no_ack_clean(nid,0x20 + XLB_L_LINKF, 0x00000000);
-    result = swallow_xlinkboot_route_configure(rows-1,cols-2,rows,cols,SWXLB_COMPUTE_LINK_CONFIG);
+    result = swallow_xlinkboot_route_configure(rows-1,cols-2,rows,cols,SWXLB_COMPUTE_LINK_CONFIG,position);
     if (result < 0)
     {
       return result;
     }
-    result = swallow_xlinkboot_route_configure(rows-1,cols-1,rows,cols,SWXLB_COMPUTE_LINK_CONFIG);
+    result = swallow_xlinkboot_route_configure(rows-1,cols-1,rows,cols,SWXLB_COMPUTE_LINK_CONFIG,position);
     if (result < 0)
     {
       return result;
@@ -524,7 +524,7 @@ int swallow_xlinkboot(unsigned boards_w, unsigned boards_h, unsigned reset, unsi
           return result;
         }
       }
-      result = swallow_xlinkboot_route_configure(rows-1,c,rows,cols,SWXLB_COMPUTE_LINK_CONFIG);
+      result = swallow_xlinkboot_route_configure(rows-1,c,rows,cols,SWXLB_COMPUTE_LINK_CONFIG,position);
       if (result < 0)
       {
         return result;
@@ -534,12 +534,12 @@ int swallow_xlinkboot(unsigned boards_w, unsigned boards_h, unsigned reset, unsi
     nid = swallow_xlinkboot_genid(rows-1,cols-2);
     write_sswitch_reg_no_ack_clean(nid,0x20 + XLB_L_LINKA, XLB_ROUTE_AVOID);
     write_sswitch_reg_no_ack_clean(nid,0x20 + XLB_L_LINKF, 0x00000000);
-    result = swallow_xlinkboot_route_configure(rows-1,cols-1,rows,cols,SWXLB_COMPUTE_LINK_CONFIG);
+    result = swallow_xlinkboot_route_configure(rows-1,cols-1,rows,cols,SWXLB_COMPUTE_LINK_CONFIG,position);
     if (result < 0)
     {
       return result;
     }
-    result = swallow_xlinkboot_route_configure(rows-1,cols-2,rows,cols,SWXLB_COMPUTE_LINK_CONFIG);
+    result = swallow_xlinkboot_route_configure(rows-1,cols-2,rows,cols,SWXLB_COMPUTE_LINK_CONFIG,position);
     if (result < 0)
     {
       return result;
