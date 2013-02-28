@@ -218,7 +218,14 @@ static int swallow_xlinkboot_route_configure(unsigned r, unsigned c, unsigned ro
     if (layer)
     {
       pdirbit = (col == 0) ? SWXLB_DIR_LEFT : SWXLB_DIR_RIGHT;
-      xscopedirbits = row == 1 ? SWXLB_DIR_LEFT : SWXLB_DIR_AWAY;
+      //xscopedirbits = row == 1 ? SWXLB_DIR_LEFT : SWXLB_DIR_AWAY;
+      if (row == rows - 1)
+        if (col == cols/2 - 1)
+          xscopedirbits = SWXLB_DIR_AWAY;
+        else
+          xscopedirbits = SWXLB_DIR_RIGHT;
+      else
+        xscopedirbits = SWXLB_DIR_AWAY;
       for (i = 0; i < SWXLB_VBITS; i++)
       {
         vdirbits <<= XLB_DIR_BITS;
@@ -233,7 +240,13 @@ static int swallow_xlinkboot_route_configure(unsigned r, unsigned c, unsigned ro
     else
     {
       pdirbit = (row == 0) ? SWXLB_DIR_UP : SWXLB_DIR_DOWN;
-      xscopedirbits = ((row == 0) ? SWXLB_DIR_DOWN : ((row == 1) ? SWXLB_DIR_AWAY : SWXLB_DIR_UP));
+      //xscopedirbits = ((row == 0) ? SWXLB_DIR_DOWN : ((row == 1) ? SWXLB_DIR_AWAY : SWXLB_DIR_UP));
+      if (row != rows - 1)
+        xscopedirbits = SWXLB_DIR_DOWN;
+      else if (col == cols/2 - 1)
+        xscopedirbits = SWXLB_DIR_DOWN;
+      else
+        xscopedirbits = SWXLB_DIR_TOWARDS;
       for (i = 0; i < SWXLB_HBITS; i++)
       {
         hdirbits <<= XLB_DIR_BITS;
@@ -601,6 +614,7 @@ int swallow_xlinkboot(unsigned boards_w, unsigned boards_h, unsigned reset, unsi
         return result;
       }
     }
+    
     nid = swallow_xlinkboot_genid(rows-1,cols-2);
     write_sswitch_reg_no_ack_clean(nid,0x20 + XLB_L_LINKA, XLB_ROUTE_AVOID);
     write_sswitch_reg_no_ack_clean(nid,0x20 + XLB_L_LINKF, 0x00000000);
