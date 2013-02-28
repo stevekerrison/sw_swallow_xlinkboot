@@ -120,57 +120,6 @@ void swallow_xlinkboot_server(chanend c_svr, out port rst)
   return;
 }
 
-/**
- * Early route provides a full routing table rather than the method that relies on XLB_ORIGIN_ID.
- * However, it differs from a full route configuration in that there are only two possible diretions.
-**/
-static int swallow_xlinkboot_early_route(unsigned id, unsigned lrev)
-{
-  unsigned row = id >> SWXLB_VPOS, col = (id >> SWXLB_HPOS) & MASK_FROM_BITS(SWXLB_HBITS),
-    layer = (id >> SWXLB_LPOS) & MASK_FROM_BITS(SWXLB_LBITS), i;
-  int result = 0;
-  unsigned ldirbits = layer ^ lrev ? XLB_ROUTE_RETURN : XLB_ROUTE_OUTBOUND;
-  unsigned vdirbits = 0, hdirbits = 0, xscopedirbits = 0x1, pdirbit = XLB_ROUTE_RETURN;
-  unsigned dirbits[2];
-  DBG(printstr,"Doing *early* route config for 0x");
-  DBG(printhexln,id);
-  DBG(printintln,lrev);
-  if (layer)
-  {
-    for (i = 0; i < SWXLB_VBITS; i++)
-    {
-      vdirbits <<= XLB_DIR_BITS;
-      vdirbits |= XLB_ROUTE_OUTBOUND;
-    }
-    for (i = SWXLB_HBITS; i != 0; i--)
-    {
-      hdirbits <<= XLB_DIR_BITS;
-      hdirbits |= (((col >> (i-1)) & 1) ? XLB_ROUTE_OUTBOUND : XLB_ROUTE_RETURN);
-    }
-  }
-  else
-  {
-    for (i = 0; i < SWXLB_HBITS; i++)
-    {
-      hdirbits <<= XLB_DIR_BITS;
-      hdirbits |= lrev ? XLB_ROUTE_RETURN : XLB_ROUTE_OUTBOUND;
-    }
-    for (i = SWXLB_VBITS; i != 0; i--)
-    {
-      vdirbits <<= XLB_DIR_BITS;
-      vdirbits |= (((row >> (i-1)) & 1) ? XLB_ROUTE_OUTBOUND : XLB_ROUTE_RETURN);
-    }
-  }
-  dirbits[0] = (((hdirbits << XLB_DIR_BITS) | ldirbits) << XLB_DIR_BITS) | pdirbit;
-  dirbits[1] = (xscopedirbits << (XLB_DIR_BITS * SWXLB_VBITS)) | vdirbits;
-  DBG(printhexln,dirbits[1]);
-  DBG(printhexln,dirbits[0]);
-  write_sswitch_reg_no_ack_clean(id,0xc,dirbits[0]);
-  write_sswitch_reg_no_ack_clean(id,0xd,dirbits[1]);
-  DBG(printstrln,"Done!");
-  return result;
-}
-
 /* We now reprogram the switch to enable all desired links for the final network and do proper routing */
 static int swallow_xlinkboot_route_configure(unsigned r, unsigned c, unsigned rows, unsigned cols, unsigned link_config)
 {
@@ -320,10 +269,8 @@ int swallow_xlinkboot(unsigned boards_w, unsigned boards_h, unsigned reset, unsi
   }
   /* Make my ID something we can pre-boot the compute nodes from */
   myid = get_local_tile_id();
-#ifdef ORIGIN
-  write_sswitch_reg_no_ack_clean(myid,0x5,ORIGIN);
-  myid = ORIGIN;
-#endif
+  write_sswitch_reg_no_ack_clean(myid,0x5,XLB_ORIGIN_ID);
+  myid = XLB_ORIGIN_ID;
   /* We are origin for now, everything routes out of us... */
   write_sswitch_reg_no_ack_clean(myid,0xc,0x0);
   write_sswitch_reg_no_ack_clean(myid,0xd,0x0);
@@ -352,20 +299,10 @@ int swallow_xlinkboot(unsigned boards_w, unsigned boards_h, unsigned reset, unsi
     {
       return result;
     }
-    result = swallow_xlinkboot_early_route(rid,0);
-    if (result < 0)
-    {
-      return result;
-    }
     bootone(rid);
     /* Now bring up the other core */
     result = xlinkboot_initial_configure(rid,rid2, XLB_L_LINKF, XLB_L_LINKG,
       SWXLB_COMPUTE_LINK_CONFIG, SWXLB_COMPUTE_LINK_CONFIG, PLL, PLL_len, SWXLB_PLL_DEFAULT);
-    if (result < 0)
-    {
-      return result;
-    }
-    result = swallow_xlinkboot_early_route(rid2,0);
     if (result < 0)
     {
       return result;
@@ -387,7 +324,6 @@ int swallow_xlinkboot(unsigned boards_w, unsigned boards_h, unsigned reset, unsi
       write_sswitch_reg_no_ack_clean(dstid,0x20 + XLB_L_LINKA, XLB_ROUTE_AVOID);
       write_sswitch_reg_no_ack_clean(dstid,0x20 + XLB_L_LINKF, 0x00000000);
     }
-    printhexln(c);
     for ( /* BLANK */ ; c >= 0; c -= 1)
     {
       unsigned srcid, dstid = swallow_xlinkboot_genid(r,c);
@@ -400,11 +336,6 @@ int swallow_xlinkboot(unsigned boards_w, unsigned boards_h, unsigned reset, unsi
         //printhexln(dstid);
         result = xlinkboot_initial_configure(srcid, dstid, XLB_L_LINKA, XLB_L_LINKB,
           SWXLB_COMPUTE_LINK_CONFIG, SWXLB_COMPUTE_LINK_CONFIG, PLL, PLL_len, SWXLB_PLL_DEFAULT);
-        if (result < 0)
-        {
-          return result;
-        }
-        result = swallow_xlinkboot_early_route(dstid,0);
         if (result < 0)
         {
           return result;
@@ -423,11 +354,6 @@ int swallow_xlinkboot(unsigned boards_w, unsigned boards_h, unsigned reset, unsi
         {
           return result;
         }
-        result = swallow_xlinkboot_early_route(dstid,0);
-        if (result < 0)
-        {
-          return result;
-        }
         bootone(dstid);
         swallow_xlinkboot_internal_links(srcid,dstid);
       }
@@ -435,14 +361,9 @@ int swallow_xlinkboot(unsigned boards_w, unsigned boards_h, unsigned reset, unsi
       else if (c & 1)
       {
         srcid = swallow_xlinkboot_genid(r,c+2);
-        printhexln(dstid);
+        //printhexln(dstid);
         result = xlinkboot_initial_configure(srcid, dstid, XLB_L_LINKA, XLB_L_LINKB,
           SWXLB_COMPUTE_LINK_CONFIG, SWXLB_COMPUTE_LINK_CONFIG, PLL, PLL_len, SWXLB_PLL_DEFAULT);
-        if (result < 0)
-        {
-          return result;
-        }
-        result = swallow_xlinkboot_early_route(dstid,1);
         if (result < 0)
         {
           return result;
@@ -456,11 +377,6 @@ int swallow_xlinkboot(unsigned boards_w, unsigned boards_h, unsigned reset, unsi
         //printhexln(dstid);
         result = xlinkboot_initial_configure(srcid, dstid, XLB_L_LINKF, XLB_L_LINKG,
           SWXLB_COMPUTE_LINK_CONFIG, SWXLB_COMPUTE_LINK_CONFIG, PLL, PLL_len, SWXLB_PLL_DEFAULT);
-        if (result < 0)
-        {
-          return result;
-        }
-        result = swallow_xlinkboot_early_route(dstid,1);
         if (result < 0)
         {
           return result;

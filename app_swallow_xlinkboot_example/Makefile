@@ -20,7 +20,7 @@ USED_MODULES = swallow_comms swallow-xlinkboot base_xlinkboot
 ifeq "$(CONFIG)" "Debug"
 XCC_FLAGS = -g -O0 -Wall
 else
-XCC_FLAGS = -g -Os -Wall -report -DDEMO_MODE -DDEBUG -DORIGIN=0x0b0d
+XCC_FLAGS = -g -Os -Wall -report -DDEMO_MODE
 endif
 
 # The VERBOSE variable, if set to 1, enables verbose output from the make
