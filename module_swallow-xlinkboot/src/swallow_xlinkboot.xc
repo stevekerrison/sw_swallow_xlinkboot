@@ -249,6 +249,24 @@ static int swallow_xlinkboot_internal_links(unsigned fside, unsigned gside)
   return 0;
 }
 
+void swallow_xlinkboot_xscope_init(void)
+{
+  unsigned data, tv;
+  timer t;
+  /* Routing table is probably wrong */
+  write_sswitch_reg_no_ack_clean(SWXLB_BOOT_ID,0xd,0x00000000);
+  write_sswitch_reg_no_ack_clean(SWXLB_BOOT_ID,0xc,0x0000000f);
+  /*for (int i = 0; i < 8; i += 1)
+  {
+    read_sswitch_reg(SWXLB_BOOT_ID,0x20 + i,data);
+    if ((data >> 8) & 0xf == 0xf)
+    {
+      read_sswitch_reg(SWXLB_BOOT_ID,0x80 + i,data);
+      write_sswitch_reg_no_ack_clean(SWXLB_BOOT_ID,0x80 + i, data | XLB_HELLO)
+    }
+  }*/
+  return;
+}
 
 
 /* Function call to apply a configuration to an array of swallow boards */
@@ -272,8 +290,8 @@ int swallow_xlinkboot(unsigned boards_w, unsigned boards_h, unsigned reset, unsi
   write_sswitch_reg_no_ack_clean(myid,0x5,XLB_ORIGIN_ID);
   myid = XLB_ORIGIN_ID;
   /* We are origin for now, everything routes out of us... */
-  write_sswitch_reg_no_ack_clean(myid,0xc,0x0);
-  write_sswitch_reg_no_ack_clean(myid,0xd,0x0);
+  write_sswitch_reg_no_ack_clean(myid,0xc,0x0000000);
+  write_sswitch_reg_no_ack_clean(myid,0xd,0x000000f); //Last nibble for XScope :)
   read_sswitch_reg(myid,0x5,data);
   DBG(printstr,"Control board ID: 0x");
   DBG(printhexln,data);

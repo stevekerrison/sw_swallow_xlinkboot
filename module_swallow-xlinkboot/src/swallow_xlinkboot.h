@@ -66,5 +66,8 @@ void swallow_xlinkboot_server(chanend c_svr, out port rst);
 /* Function call to apply a configuration to an array of swallow boards */
 int swallow_xlinkboot(unsigned boards_w, unsigned boards_h, unsigned reset,
   unsigned position, struct xlinkboot_pll_t PLL[], unsigned PLL_len, out port rst); 
+
+/* Make sure xscope will work... */  
+void swallow_xlinkboot_xscope_init(void);
   
 #endif //SWALLOW_XLINKBOOT_H
