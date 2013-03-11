@@ -101,3 +101,20 @@ testprog_wait:
 testprog_end:
 .cc_bottom testprog.elim
 
+/* Sync and die */
+.section .text
+.cc_top idleprog.elim, idleprog
+.globl idleprog
+.globl idleprog_end
+.globl idleprog.maxthreads
+.linkset idleprog.maxthreads, 4
+.align 4
+idleprog:
+getr r0,2
+in r1,res[r0]
+in r1,res[r0]
+chkct res[r0],1
+freet
+.align 4
+idleprog_end:
+.cc_bottom idleprog.elim
