@@ -40,7 +40,6 @@ kissoflife:
   out res[r5],r0
   out res[r6],r0
   out res[r7],r0
-  nop
   /* Jump back to the bootloader. */
 	getr r0,0x2
 	ldc r1,0xffff
@@ -55,6 +54,7 @@ kissoflife:
   bau r1
 .align 4
 kissoflife_end:
+
 .cc_bottom kissoflife.elim
 
 /* Blinkenlights to demonstrate chainloaded programs... */

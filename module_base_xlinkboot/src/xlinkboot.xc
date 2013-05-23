@@ -31,6 +31,29 @@ unsigned xlinkboot_disable_links(unsigned id)
   return 0;
 }
 
+/**
+ * Switch an /already active/ link to 5-wire mode
+**/
+int xlinkboot_go5(unsigned lid, unsigned local_link, unsigned local_config,
+  unsigned rid, unsigned remote_link, unsigned remote_config)
+{
+  unsigned data, tv;
+  timer t;
+  DBG(printstrln,"Go 5-wire");
+  t :> tv;
+  tv += XLB_UP_DELAY;
+  t when timerafter(tv) :> void;
+  write_sswitch_reg_no_ack_clean(rid,0x80 + remote_link,remote_config | XLB_FIVEWIRE);
+  t :> tv;
+  tv += XLB_UP_DELAY;
+  t when timerafter(tv) :> void;
+  write_sswitch_reg_no_ack_clean(lid,0x80 + local_link,local_config | XLB_FIVEWIRE);
+  t :> tv;
+  tv += XLB_UP_DELAY;
+  t when timerafter(tv) :> void;
+  return 1;
+}
+
 /** 
  * Try to safely bring up a link ready to communicate over it.
  * Assumes other end is coreID 0 and will route from src correctly.
@@ -176,7 +199,7 @@ int xlinkboot_initial_configure(unsigned local_id, unsigned remote_id, unsigned 
     }
   }
   DBG(printstrln,"Initialising link");
-  result = xlinkboot_link_up(local_id, local_link, local_config, remote_link, remote_config);
+  result = xlinkboot_link_up(local_id, local_link, XLB_INITIAL_LINK_CONFIG, remote_link, XLB_INITIAL_LINK_CONFIG);
   if (result < 0)
   {
     return result;
@@ -213,6 +236,11 @@ int xlinkboot_initial_configure(unsigned local_id, unsigned remote_id, unsigned 
   DBG(printhexln,remote_id);
   /* Set up my real node ID */
   write_sswitch_reg_no_ack_clean(0,0x05,remote_id);
+  /*result = xlinkboot_go5(local_id, local_link, local_config, remote_id, remote_link, remote_config);
+  if (result < 0)
+  {
+    return result;
+  }*/
   /* Ditch the read-back because higher level boot agents may want to meddle with the routing table 
   DBG(printstrln,"Remote routing tables set, reading some data back");
   read_sswitch_reg(remote_id,0x05,data);

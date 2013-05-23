@@ -27,7 +27,7 @@ int main(void)
   unsigned tv1, tv2;
   struct xlinkboot_pll_t PLLs[1] = {{-1,0,-1,0x00002700,1,5}};
   t :> tv1;
-  result = swallow_xlinkboot(2,3,1,SWXLB_POS_BOTTOM,PLLs,1,rst);
+  result = swallow_xlinkboot(1,1,1,SWXLB_POS_BOTTOM,PLLs,1,rst);
   t :> tv2;
   printstr("Result: ");
   printintln(result);

@@ -54,6 +54,33 @@ static void bootone(unsigned id)
   DBG(printstrln,"Done");
 }
 
+/* Make the remaining 2-wire links 5-wire links */
+static void gofive(unsigned rows, unsigned cols)
+{
+  unsigned lid, rid, result;
+  /* First do the vertical links */
+  for (int c = 0; c < cols; c += 2)
+  {
+    for (int r = 1; r < rows; r += 1)
+    {
+      rid = swallow_xlinkboot_genid(r-1,c);
+      lid = swallow_xlinkboot_genid(r,c);
+      xlinkboot_go5(lid,XLB_L_LINKA,SWXLB_COMPUTE_LINK_CONFIG,rid,XLB_L_LINKB,SWXLB_PERIPH_LINK_CONFIG);
+    }
+  }
+  /* Now do the horizontal links */
+  for (int r = 0; r < rows; r += 1)
+  {
+    for (int c = 3; c < cols; c += 2)
+    {
+      rid = swallow_xlinkboot_genid(r,c-2);
+      lid = swallow_xlinkboot_genid(r,c);
+      xlinkboot_go5(lid,XLB_L_LINKA,SWXLB_COMPUTE_LINK_CONFIG,rid,XLB_L_LINKB,SWXLB_PERIPH_LINK_CONFIG);
+    }
+  }
+  return;
+}
+
 #ifdef DEMO_MODE
 /**
  * This is not very useful except as a demo, to show that all the cores can be booted and flash LEDs
@@ -241,8 +268,12 @@ static int swallow_xlinkboot_internal_links(unsigned fside, unsigned gside)
     glinks[] = {XLB_L_LINKF,XLB_L_LINKH,XLB_L_LINKE};
   for (i = 0; i < 3; i += 1)
   {
-    result = xlinkboot_secondary_link_up(fside, flinks[i],SWXLB_COMPUTE_LINK_CONFIG,
-      gside, glinks[i], SWXLB_COMPUTE_LINK_CONFIG);
+    result = xlinkboot_secondary_link_up(fside, flinks[i],SWXLB_L2_LINK_CONFIG,
+      gside, glinks[i], SWXLB_L2_LINK_CONFIG);
+    if (result < 0)
+      return result;
+    result = xlinkboot_go5(fside, flinks[i],SWXLB_L2_LINK_CONFIG,
+      gside, glinks[i], SWXLB_L2_LINK_CONFIG);
     if (result < 0)
       return result;
   }
@@ -311,8 +342,13 @@ int swallow_xlinkboot(unsigned boards_w, unsigned boards_h, unsigned reset, unsi
       rid2 = rid ^ (1 << SWXLB_LPOS);
     }
     result = xlinkboot_initial_configure(myid, rid, XLB_L_LINKD, XLB_L_LINKB,
-      SWXLB_PERIPH_LINK_CONFIG, SWXLB_COMPUTE_LINK_CONFIG, PLL, PLL_len, SWXLB_PLL_DEFAULT);
+      SWXLB_PERIPH_LINK_CONFIG, SWXLB_PERIPH_LINK_CONFIG, PLL, PLL_len, SWXLB_PLL_DEFAULT);
     /* TODO: What links will I need? */
+    if (result < 0)
+    {
+      return result;
+    }
+    result = xlinkboot_go5(myid, XLB_L_LINKD, SWXLB_PERIPH_LINK_CONFIG, rid, XLB_L_LINKB, SWXLB_PERIPH_LINK_CONFIG);
     if (result < 0)
     {
       return result;
@@ -320,7 +356,12 @@ int swallow_xlinkboot(unsigned boards_w, unsigned boards_h, unsigned reset, unsi
     bootone(rid);
     /* Now bring up the other core */
     result = xlinkboot_initial_configure(rid,rid2, XLB_L_LINKF, XLB_L_LINKG,
-      SWXLB_COMPUTE_LINK_CONFIG, SWXLB_COMPUTE_LINK_CONFIG, PLL, PLL_len, SWXLB_PLL_DEFAULT);
+      SWXLB_L2_LINK_CONFIG, SWXLB_L2_LINK_CONFIG, PLL, PLL_len, SWXLB_PLL_DEFAULT);
+    if (result < 0)
+    {
+      return result;
+    }
+    result = xlinkboot_go5(rid, XLB_L_LINKF, SWXLB_L2_LINK_CONFIG, rid2, XLB_L_LINKG, SWXLB_L2_LINK_CONFIG);
     if (result < 0)
     {
       return result;
@@ -367,7 +408,12 @@ int swallow_xlinkboot(unsigned boards_w, unsigned boards_h, unsigned reset, unsi
         dstid = swallow_xlinkboot_genid(r,cols-1);
         //printhexln(dstid);
         result = xlinkboot_initial_configure(srcid, dstid, XLB_L_LINKF, XLB_L_LINKG,
-          SWXLB_COMPUTE_LINK_CONFIG, SWXLB_COMPUTE_LINK_CONFIG, PLL, PLL_len, SWXLB_PLL_DEFAULT);
+          SWXLB_L2_LINK_CONFIG, SWXLB_L2_LINK_CONFIG, PLL, PLL_len, SWXLB_PLL_DEFAULT);
+        if (result < 0)
+        {
+          return result;
+        }
+        result = xlinkboot_go5(srcid, XLB_L_LINKF, SWXLB_L2_LINK_CONFIG, dstid, XLB_L_LINKG, SWXLB_L2_LINK_CONFIG);
         if (result < 0)
         {
           return result;
@@ -394,7 +440,12 @@ int swallow_xlinkboot(unsigned boards_w, unsigned boards_h, unsigned reset, unsi
         srcid = swallow_xlinkboot_genid(r,c+1);
         //printhexln(dstid);
         result = xlinkboot_initial_configure(srcid, dstid, XLB_L_LINKF, XLB_L_LINKG,
-          SWXLB_COMPUTE_LINK_CONFIG, SWXLB_COMPUTE_LINK_CONFIG, PLL, PLL_len, SWXLB_PLL_DEFAULT);
+          SWXLB_L2_LINK_CONFIG, SWXLB_L2_LINK_CONFIG, PLL, PLL_len, SWXLB_PLL_DEFAULT);
+        if (result < 0)
+        {
+          return result;
+        }
+        result = xlinkboot_go5(srcid, XLB_L_LINKF, SWXLB_L2_LINK_CONFIG, dstid, XLB_L_LINKG, SWXLB_L2_LINK_CONFIG);
         if (result < 0)
         {
           return result;
@@ -576,10 +627,12 @@ int swallow_xlinkboot(unsigned boards_w, unsigned boards_h, unsigned reset, unsi
   /* Just checking we can communicate across the network - not exactly a thorough test but it should catch
    * if things are really boned */
   read_sswitch_reg(0x0,0x5,data);
+  gofive(rows,cols);
 #ifdef DEMO_MODE
   /* Now run a tiny program to test the cores and let there be light! */
   bootall(rows,cols);
 #endif
+
   /* TODO: Test & bring up any connected peripheral links */
   return 0;
 }

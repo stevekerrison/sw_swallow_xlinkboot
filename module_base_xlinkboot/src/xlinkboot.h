@@ -63,6 +63,8 @@ struct xlinkboot_pll_t {
 #define XLB_RST_PULSE         0x6000
 #define XLB_RST_INIT          0x6000
 
+#define XLB_INITIAL_LINK_CONFIG 0x80008004
+
 /* TODO: PLL-based calculation of what the delay should be */
 #define XLB_UP_DELAY          0x6000
 #define XLB_HELLO             0x01000000
@@ -87,6 +89,9 @@ struct xlinkboot_pll_t {
 unsigned xlinkboot_disable_links(unsigned id);
 
 unsigned xlinkboot_pll_search(unsigned id, struct xlinkboot_pll_t PLLs[], unsigned PLL_len);
+
+int xlinkboot_go5(unsigned lid, unsigned local_link, unsigned local_config,
+  unsigned rid, unsigned remote_link, unsigned remote_config);
 
 /* Enable and bring-up a link */
 int xlinkboot_link_up(unsigned id, unsigned local_link,
