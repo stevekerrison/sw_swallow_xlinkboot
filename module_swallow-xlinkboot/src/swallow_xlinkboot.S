@@ -22,8 +22,8 @@ kissoflife:
   ldc r0,6
   setc res[r0],0x8
   setc res[r0],0xf
-  ldc r0,0x0
-  sub r0,r0,1
+  ldc r0,0x1
+  //sub r0,r0,1
   ldc r1,0x405
   ldc r5,0x108
   ldc r6,0x10a

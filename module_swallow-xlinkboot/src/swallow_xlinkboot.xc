@@ -65,7 +65,7 @@ static void gofive(unsigned rows, unsigned cols)
     {
       rid = swallow_xlinkboot_genid(r-1,c);
       lid = swallow_xlinkboot_genid(r,c);
-      xlinkboot_go5(lid,XLB_L_LINKA,SWXLB_COMPUTE_LINK_CONFIG,rid,XLB_L_LINKB,SWXLB_PERIPH_LINK_CONFIG);
+      xlinkboot_go5(lid,XLB_L_LINKA,SWXLB_COMPUTE_LINK_CONFIG,rid,XLB_L_LINKB,SWXLB_COMPUTE_LINK_CONFIG);
     }
   }
   /* Now do the horizontal links */
@@ -75,9 +75,31 @@ static void gofive(unsigned rows, unsigned cols)
     {
       rid = swallow_xlinkboot_genid(r,c-2);
       lid = swallow_xlinkboot_genid(r,c);
-      xlinkboot_go5(lid,XLB_L_LINKA,SWXLB_COMPUTE_LINK_CONFIG,rid,XLB_L_LINKB,SWXLB_PERIPH_LINK_CONFIG);
+      xlinkboot_go5(lid,XLB_L_LINKA,SWXLB_COMPUTE_LINK_CONFIG,rid,XLB_L_LINKB,SWXLB_COMPUTE_LINK_CONFIG);
     }
   }
+#if 0
+  /* Now assert that all active and credited links are 5-wire */
+  for (int r = 0; r < rows; r += 1)
+  {
+    for (int c = 0; c < cols; c += 1)
+    {
+      unsigned data;
+      for (int i = 0x80; i < 0x88; i += 1)
+      {
+        read_sswitch_reg(swallow_xlinkboot_genid(r,c),i,data);
+        if ((data & 0x86000000) == 0x86000000 && !(data & 0x40000000))
+        {
+          printhex(swallow_xlinkboot_genid(r,c));
+          printchar(':');
+          printhex(i);
+          printchar('=');
+          printhexln(data);
+        }
+      }
+    }
+  }
+#endif
   return;
 }
 
