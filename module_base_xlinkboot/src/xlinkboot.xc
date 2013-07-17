@@ -186,7 +186,7 @@ unsigned xlinkboot_pll_search(unsigned id, struct xlinkboot_pll_t PLLs[], unsign
 int xlinkboot_initial_configure(unsigned local_id, unsigned remote_id, unsigned local_link, unsigned remote_link,
   unsigned local_config, unsigned remote_config, struct xlinkboot_pll_t PLLs[], unsigned PLL_len, unsigned PLL_default)
 {
-  int result, i;
+  int result, i, pllidx;
   unsigned data, tv;
   timer t;
   /* Make sure no links are considered outgoing (dir 0) at the start */
@@ -205,10 +205,10 @@ int xlinkboot_initial_configure(unsigned local_id, unsigned remote_id, unsigned 
     return result;
   }
   DBG(printstrln,"Link up");
-  result = xlinkboot_pll_search(remote_id, PLLs, PLL_len);
+  pllidx = xlinkboot_pll_search(remote_id, PLLs, PLL_len);
   /* Reprogram the PLL, triggering a soft-reset of the core & switch */
   DBG(printstrln,"Programming PLL...");
-  write_sswitch_reg_no_ack_clean(0,0x06,result == XLB_PLL_DEFAULT ? PLL_default : PLLs[result].val);
+  write_sswitch_reg_no_ack_clean(0,0x06,pllidx == XLB_PLL_DEFAULT ? PLL_default : PLLs[pllidx].val);
   t :> tv;
   tv += XLB_RST_INIT;
   t when timerafter(tv) :> void;
@@ -219,10 +219,10 @@ int xlinkboot_initial_configure(unsigned local_id, unsigned remote_id, unsigned 
     return result;
   }
   /* Now set the ref and switch clock dividers (no reset required) */
-  if (result != XLB_PLL_DEFAULT)
+  if (pllidx != XLB_PLL_DEFAULT)
   {
-    write_sswitch_reg_no_ack_clean(0,0x7,PLLs[result].switch_div);
-    write_sswitch_reg_no_ack_clean(0,0x8,PLLs[result].ref_div);
+    write_sswitch_reg_no_ack_clean(0,0x7,PLLs[pllidx].switch_div-1);
+    write_sswitch_reg_no_ack_clean(0,0x8,PLLs[pllidx].ref_div-1);
   }
   DBG(printstr,"Programming direction: ");
   DBG(printhexln,remote_link);

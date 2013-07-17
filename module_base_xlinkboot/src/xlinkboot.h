@@ -28,12 +28,20 @@
 
 /* Help program groups of chips with PLL values */
 struct xlinkboot_pll_t {
-  unsigned mask;
-  unsigned start;
-  unsigned end;
-  unsigned val;
-  unsigned switch_div;
-  unsigned ref_div;
+  /* Used as search criteria if we have a set of PLLs */
+  unsigned mask;        // Mask applied to ID during search, such that (id & mask) == id
+  unsigned start;       // Lowest ID that this config applies to
+  unsigned end;         // Highest ID that this config applies to
+  /* Actual configuration fields */
+  unsigned val;         // The actual value of the PLL register
+  unsigned switch_div;  // The divider we want to apply such that switch
+  unsigned ref_div;     // The divider we want to apply for the ref clock
+  /*
+   * NOTE: The dividers are the actual dividers we want, not the raw values
+   * needed in the switch registers... the xlinkboot code handles the
+   * conversion for you. E.g. if val is set to give us PLL of 500MHz, to get
+   * the switch at 500MHz set switch_div to 1.
+   */
 };
 
 #define XLB_GENERIC_FAIL      0x1
