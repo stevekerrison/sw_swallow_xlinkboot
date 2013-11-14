@@ -32,23 +32,23 @@ static void bootone(unsigned id)
 {
   unsigned ce = getChanend(0x2), size, crc = 0xd15ab1e, loc, i, word;
   DBG(printstrln,"Light 'em up");
-  asm("ldap r11,kissoflife\n"
+  __asm__ __volatile__("ldap r11,kissoflife\n"
     "mov %0,r11\n"
     "ldap r11,kissoflife_end\n"
     "sub %0,r11,%0\n"
     "shr %0,%0,2":"=r"(size):);
-  asm("ldap r11,kissoflife\n"
+  __asm__ __volatile__("ldap r11,kissoflife\n"
     "mov %0,r11":"=r"(loc)::"r11");
-  asm("setd res[%0],%1"::"r"(ce),"r"((id << 16) | 0x2));
-  asm("out res[%0],%0\n"
+  __asm__ __volatile__("setd res[%0],%1"::"r"(ce),"r"((id << 16) | 0x2));
+  __asm__ __volatile__("out res[%0],%0\n"
     "out res[%0],%1"::"r"(ce),"r"(size));
   for (i = loc; i < loc + (size*4); i += 4)
   {
-    asm("ldw %0,%1[0]\n"
+    __asm__ __volatile__("ldw %0,%1[0]\n"
       "out res[%2],%0\n":"=r"(word):"r"(i),"r"(ce));
   }
-  asm("out res[%0],%1\n"::"r"(ce),"r"(crc));
-  asm("outct res[%0],1\n"
+  __asm__ __volatile__("out res[%0],%1\n"::"r"(ce),"r"(crc));
+  __asm__ __volatile__("outct res[%0],1\n"
     "chkct res[%0],1\n"::"r"(ce));
   freeChanend(ce);
   DBG(printstrln,"Done");
@@ -111,7 +111,7 @@ static void gofive(unsigned rows, unsigned cols)
 static void bootall(unsigned rows, unsigned cols)
 {
   unsigned ce = getChanend(0x2), r, c, id, size, crc = 0xd15ab1e, loc, i, word;
-  asm("ldap r11,testprog\n"
+  __asm__ __volatile__("ldap r11,testprog\n"
     "mov %0,r11\n"
     "ldap r11,testprog_end\n"
     "sub %0,r11,%0\n"
@@ -120,22 +120,22 @@ static void bootall(unsigned rows, unsigned cols)
   {
     for (c = 0; c < cols; c += 1)
     {
-      asm("ldap r11,testprog\n"
+      __asm__ __volatile__("ldap r11,testprog\n"
         "mov %0,r11":"=r"(loc)::"r11");
       id = swallow_xlinkboot_genid(r,c);
       //printhex(id);
-      asm("setd res[%0],%1"::"r"(ce),"r"((id << 16) | 0x2));
-      asm("out res[%0],%0\n"
+      __asm__ __volatile__("setd res[%0],%1"::"r"(ce),"r"((id << 16) | 0x2));
+      __asm__ __volatile__("out res[%0],%0\n"
         "out res[%0],%1"::"r"(ce),"r"(size));
       for (i = loc; i < loc + (size*4); i += 4)
       {
-        asm("ldw %0,%1[0]\n"
+        __asm__ __volatile__("ldw %0,%1[0]\n"
           "out res[%2],%0\n":"=r"(word):"r"(i),"r"(ce));
         //printchar('.');
       }
       //printcharln('\0');
-      asm("out res[%0],%1\n"::"r"(ce),"r"(crc));
-      asm("outct res[%0],1\n"
+      __asm__ __volatile__("out res[%0],%1\n"::"r"(ce),"r"(crc));
+      __asm__ __volatile__("outct res[%0],1\n"
         "chkct res[%0],1\n"::"r"(ce));
     }
   }
