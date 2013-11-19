@@ -54,6 +54,36 @@ static void bootone(unsigned id)
   DBG(printstrln,"Done");
 }
 
+/* Disable the edge links that may have been enabled by the boot ROM */
+static void disable_edges(unsigned rows, unsigned cols, unsigned boot_position)
+{
+  for (int row = 0; row < rows; row += 1) {
+    unsigned rid = swallow_xlinkboot_genid(row,cols-1); //Right edge
+    unsigned config;
+    if (boot_position == SWXLB_POS_RIGHT && row == rows - 1) {
+      //Jump out of the loop to avoid disabling the boot link!
+      break;
+    }
+    //Now disable the B link
+    read_sswitch_reg(rid,0x80 + XLB_L_LINKB,config); //Get config
+    config ^= XLB_ENABLE; //Unset the enable bit
+    write_sswitch_reg_no_ack_clean(rid,0x80 + XLB_L_LINKB,config);//Write config
+  }
+  for (int col = 0; col < cols; col += 2) {
+    unsigned rid = swallow_xlinkboot_genid(rows-1,col); //Bottom edge
+    unsigned config;
+    if (boot_position == SWXLB_POS_BOTTOM && col == cols - 2) {
+      //Jump out of the loop to avoid disabling the boot link!
+      break;
+    }
+    //Now disable the B link
+    read_sswitch_reg(rid,0x80 + XLB_L_LINKB,config); //Get config
+    config ^= XLB_ENABLE; //Unset the enable bit
+    write_sswitch_reg_no_ack_clean(rid,0x80 + XLB_L_LINKB,config);//Write config
+  }
+  return;
+}
+
 /* Make the remaining 2-wire links 5-wire links */
 static void gofive(unsigned rows, unsigned cols)
 {
@@ -646,6 +676,8 @@ int swallow_xlinkboot(unsigned boards_w, unsigned boards_h, unsigned reset, unsi
     read_sswitch_reg(nid,0x5,myid);
   }
 #endif
+  /* Disable edge links that should not be active any more! */
+  disable_edges(rows,cols,position);
   /* Just checking we can communicate across the network - not exactly a thorough test but it should catch
    * if things are really boned */
   read_sswitch_reg(0x0,0x5,data);
