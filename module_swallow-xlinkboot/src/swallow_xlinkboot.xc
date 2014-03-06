@@ -24,6 +24,68 @@ static unsigned swallow_xlinkboot_genid(unsigned row, unsigned col)
   return (row << SWXLB_VPOS) | (col << SWXLB_LPOS);
 }
 
+/*
+ * Brings up a link on an already configured system, to talk to a peripheral
+ * board.
+ */
+int peripheral_link_up() {
+  unsigned tid = get_local_tile_id(), local_link, remote_link, tv, data,
+    rid = tid | 1, dir;
+  timer t;
+  DBG(printstrln,"Attempting peripheral init");
+  /* If vertical ID bits are set, we're NOT on top, so are using link B. */
+  if ((tid >> SWXLB_VPOS) & COUNT_FROM_BITS(SWXLB_VBITS)) {
+    local_link = XLB_L_LINKB;
+    remote_link = XLB_L_LINKD;
+    dir = SWXLB_DIR_DOWN << XLB_DIR_SHIFT;
+  } else {
+    local_link = XLB_L_LINKA;
+    remote_link = XLB_L_LINKC;
+    dir = SWXLB_DIR_UP << XLB_DIR_SHIFT;
+  }
+  write_sswitch_reg_no_ack(tid,0x80 + local_link,SWXLB_PERIPH_LINK_CONFIG);
+  write_sswitch_reg_no_ack(tid,0x20 + local_link,dir);
+  read_sswitch_reg(tid,0x80 + local_link,data);
+  write_sswitch_reg_no_ack(tid,0x80 + local_link,
+    SWXLB_PERIPH_LINK_CONFIG | XLB_HELLO);
+  t :> tv;
+  t when timerafter(tv + XLB_UP_DELAY) :> void;
+  read_sswitch_reg(tid,0x80 + local_link,data);
+  if((data & (XLB_ERR | XLB_CAN_TX)) != XLB_CAN_TX)
+  {
+    DBG(printstrln,"FAIL on local setup");
+    return -XLB_LINK_FAIL;
+  }
+  /* Ask the remote switch to change speed and issue a HELLO back to us */
+  write_sswitch_reg_no_ack(rid,0x80 + remote_link, SWXLB_PERIPH_LINK_CONFIG);
+  t :> tv;
+  t when timerafter(tv + XLB_UP_DELAY*10) :> void;
+  write_sswitch_reg_no_ack(rid,0x80 + remote_link,
+    SWXLB_PERIPH_LINK_CONFIG | XLB_HELLO);
+  t :> tv;
+  t when timerafter(tv + XLB_UP_DELAY*10) :> void;
+  read_sswitch_reg(tid,0x80 + local_link,data);
+  if((data & (XLB_ERR | XLB_CAN_TX | XLB_CAN_RX)) != (XLB_CAN_TX | XLB_CAN_RX))
+  {
+    DBG(printstrln,"FAIL on remote setup");
+    DBG(printhexln,data);
+    return -XLB_LINK_FAIL;
+  }
+  /* Now go five wire */
+  write_sswitch_reg_no_ack(rid,0x80 + remote_link,
+    SWXLB_PERIPH_LINK_CONFIG | XLB_FIVEWIRE);
+  t :> tv;
+  t when timerafter(tv + XLB_UP_DELAY) :> void;
+  write_sswitch_reg_no_ack(tid,0x80 + local_link,
+    SWXLB_PERIPH_LINK_CONFIG | XLB_FIVEWIRE);
+  t :> tv;
+  t when timerafter(tv + XLB_UP_DELAY) :> void;
+  read_sswitch_reg(rid,0x80 + remote_link,data);
+  /* Done! */
+  DBG(printstrln,"Done!");
+  return 0;
+}
+
 /**
  * We use this to send the kissoflife program to a core at an appropriate moment to signify that
  * it's ready to receive a full program.
@@ -683,6 +745,7 @@ int swallow_xlinkboot(unsigned boards_w, unsigned boards_h, unsigned reset, unsi
   read_sswitch_reg(0x0,0x5,data);
   gofive(rows,cols);
 #ifdef DEMO_MODE
+  printstrln("Running demo...");
   /* Now run a tiny program to test the cores and let there be light! */
   bootall(rows,cols);
 #endif

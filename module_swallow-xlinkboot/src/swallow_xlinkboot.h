@@ -50,6 +50,13 @@
 #define SWXLB_INVALID_BOARD_DIMENSIONS  0x20000
 #define SWXLB_INVALID_PERIPHERAL_POS    0x30000
 
+/* Macros for many-core init */
+#define PERIPHERALS_STEP  2 //Don't change me
+#define PERIPHERALS_TOP_INIT(num) \
+    par (unsigned i = 0; i < num * PERIPHERALS_STEP; i += 2) {    \
+      on tile[i]: peripheral_link_up();                           \
+    }
+
 struct swallow_xlinkboot_cfg {
   unsigned boards_w;
   unsigned boards_h;
@@ -60,6 +67,12 @@ struct swallow_xlinkboot_cfg {
   out port reset_port;
   
 };
+
+/*
+ * Brings up a link on an already configured system, to talk to a peripheral
+ * board.
+ */
+int peripheral_link_up();
 
 /* Launch a server thread, receives configuration and then applies it */
 void swallow_xlinkboot_server(chanend c_svr, out port rst);
