@@ -50,6 +50,8 @@
 #define SWXLB_INVALID_BOARD_DIMENSIONS  0x20000
 #define SWXLB_INVALID_PERIPHERAL_POS    0x30000
 
+#define SWXLB_DIVIDER_DEFAULT   0xff
+
 /* Macros for many-core init */
 #define PERIPHERALS_STEP  2 //Don't change me
 #define PERIPHERALS_TOP_INIT(num) \
@@ -73,6 +75,24 @@ struct swallow_xlinkboot_cfg {
  * board.
  */
 int peripheral_link_up();
+
+/*
+ *  Issue power saving measures to all cores (slow down their clocks when idle)
+ */
+int swallow_xlinkboot_powersave_remote();
+
+/*
+ *  Issue power saving measures to the local core, optionally only if no other
+ *  threads appear allocated.
+ *  
+ *  If permanent = 1, clock divider will be enabled regardless of thread
+ *  activity, if 0, divider will be enabled only when all threads idle/waiting.
+ *  If only_unused = 1, divider will be configured only if no other threads
+ *  appear to be allocated on the core. This MAY RACE and steal thread
+ *  resources, possibly causing exception or false positive in some situations.
+ */
+int swallow_xlinkboot_powersave_local(unsigned divider, unsigned permanent,
+  unsigned only_unused);
 
 /* Launch a server thread, receives configuration and then applies it */
 void swallow_xlinkboot_server(chanend c_svr, out port rst);

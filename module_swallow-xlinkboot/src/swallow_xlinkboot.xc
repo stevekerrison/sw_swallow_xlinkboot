@@ -24,6 +24,62 @@ static unsigned swallow_xlinkboot_genid(unsigned row, unsigned col)
   return (row << SWXLB_VPOS) | (col << SWXLB_LPOS);
 }
 
+static void swallow_xlinkboot_thread_dealloc(unsigned threads[],
+  unsigned count) {
+  for (int i = 0; i < count; i += 1) {
+    __asm__ __volatile__("freer res[%0]"::"r"(threads[i]));
+  }
+}
+
+/*
+ *  Issue power saving measures to the local core, optionally only if no other
+ *  threads appear allocated.
+ *  
+ *  If permanent = 1, clock divider will be enabled regardless of thread
+ *  activity, if 0, divider will be enabled only when all threads idle/waiting.
+ *  If only_unused = 1, divider will be configured only if no other threads
+ *  appear to be allocated on the core. This MAY RACE and steal thread
+ *  resources, possibly causing exception or false positive in some situations.
+ */
+int swallow_xlinkboot_powersave_local(unsigned divider, unsigned permanent,
+  unsigned only_unused) {
+  unsigned tileid = get_local_tile_id(), data,
+    ctl = 0x10 | (permanent ? 0x00 : 0x20);
+  if (only_unused) {
+    unsigned threads[7], tcount = 0;
+    if (get_logical_core_id() != 0) {
+      //Assume that if we're not thread zero, something else is...
+      return 0;
+    }
+    __asm__ __volatile__("getr %0,4":"=r"(threads[0]):);
+    if (threads[0] == 0) {
+      //Failed to get thread, so it we must be fully allocated.
+      return 0;
+    }
+    for (int i = 1; i < 7; i += 1) {
+      __asm__ __volatile__("getr %0,4":"=r"(threads[i]):);
+      if (threads[i] == 0) {
+        //Failed to get a thread... out we go!
+        swallow_xlinkboot_thread_dealloc(threads,i);
+        return 0;
+      }
+      if ((threads[i] >> 8) - (threads[i-1] >> 8) != 1) {
+        //Sequence not preserved - must be another alloc'd thread in there.
+        swallow_xlinkboot_thread_dealloc(threads,i);
+        return 0;
+      }
+    }
+    //Looks like we made it! Clean up and fall-through
+    swallow_xlinkboot_thread_dealloc(threads,7);
+  }
+  write_pswitch_reg(tileid, 6, divider);
+  data = getps(0x020b);
+  data = (data & ~0x30) | ctl;
+  setps(0x020b,data);
+  //Done!
+  return 1;
+}
+
 /*
  * Brings up a link on an already configured system, to talk to a peripheral
  * board.
